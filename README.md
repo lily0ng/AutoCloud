@@ -727,7 +727,7 @@ Need help? Here's how to get support:
 <img src="https://github.com/lily0ng.png" width="180" height="180" style="border-radius: 50%; border: 4px solid #667eea; box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);" alt="Lily Yang"/>
 
 <h2 style="margin-top: 20px;">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=32&duration=2500&pause=800&color=667EEA&center=true&vCenter=true&width=600&lines=Lily+Yang+💀;Offensive+Researcher+🔴;Black+Hat+Hacker+⚡;Cloud+Security+Engineer+☁️;Reverse+Engineer+🔧;Software+Engineer+💻" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=32&duration=2500&pause=800&color=667EEA&center=true&vCenter=true&width=600&lines=Lily+Yang;Offensive+Researcher;Black+Hat+Hacker;Cloud+Security+Engineer;Reverse+Engineer;Software+Engineer" alt="Typing SVG" />
 </h2>
 
 <p align="center">
