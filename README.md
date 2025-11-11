@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&duration=3000&pause=1000&color=4285F4&center=true&vCenter=true&multiline=true&width=800&height=100&lines=Production-Ready+IaaS+%7C+PaaS+%7C+SaaS+Templates;Multi-Cloud+%E2%80%A2+Security+%E2%80%A2+Automation+%E2%80%A2+DevOps;Built+by+0xff+with+%E2%9D%A4%EF%B8%8F" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&duration=3000&pause=1000&color=4285F4&center=true&vCenter=true&multiline=true&width=800&height=100&lines=Production-Ready+IaaS+%7C+PaaS+%7C+SaaS+Templates;Multi-Cloud+%E2%80%A2+Security+%E2%80%A2+Automation+%E2%80%A2+DevOps;Built+by+Lily+Yang+with+%E2%9D%A4%EF%B8%8F" alt="Typing SVG" />
 </p>
 
 <!-- Badges -->
@@ -15,10 +15,10 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License">
   </a>
-  <a href="https://github.com/0xff/autocloud">
+  <a href="https://github.com/lily0ng/AutoCloud">
     <img src="https://img.shields.io/badge/Version-1.0.0-brightgreen.svg?style=for-the-badge&logo=semver&logoColor=white" alt="Version">
   </a>
-  <a href="https://github.com/0xff/autocloud/commits/main">
+  <a href="https://github.com/lily0ng/AutoCloud/commits/main">
     <img src="https://img.shields.io/badge/Updated-January%202025-blue.svg?style=for-the-badge&logo=git&logoColor=white" alt="Last Commit">
   </a>
   <a href="CONTRIBUTING.md">
@@ -613,7 +613,7 @@ Need help? Here's how to get support:
 
 - 📚 Check the [Documentation](docs/)
 - 💬 Join our [Community Discord](https://discadia.com/server/cyber-insights-forums-cif/)
-- 🐛 Report issues on [GitHub Issues](https://github.com/0xff/autocloud/issues)
+- 🐛 Report issues on [GitHub Issues](https://github.com/lily0ng/AutoCloud/issues)
 - 📧 Contact: support@cifsecurity.com
 
 <br>
