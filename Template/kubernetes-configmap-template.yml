@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  labels:
+    app: my-app
+data:
+  app.properties: |
+    server.port=8080
+    logging.level=INFO
+    database.pool.size=10
+  
+  config.json: |
+    {
+      "environment": "production",
+      "features": {
+        "authentication": true,
+        "caching": true
+      },
+      "limits": {
+        "maxConnections": 100,
+        "timeout": 30
+      }
+    }
+  
+  nginx.conf: |
+    server {
+      listen 80;
+      server_name example.com;
+      location / {
+        proxy_pass http://backend:8080;
+      }
+    }

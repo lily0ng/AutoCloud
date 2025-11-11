@@ -1,0 +1,133 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@1.5
+
+parameters:
+  python-version:
+    type: string
+    default: "3.9"
+  os:
+    type: string
+    default: "linux"
+  database:
+    type: string
+    default: "postgres"
+
+executors:
+  python-linux:
+    docker:
+      - image: cimg/python:<< pipeline.parameters.python-version >>
+      - image: cimg/postgres:14.0
+        environment:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+    environment:
+      DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+
+commands:
+  install-dependencies:
+    steps:
+      - python/install-packages:
+          pkg-manager: pip
+          packages:
+            - pytest
+            - pytest-cov
+            - psycopg2-binary
+            - sqlalchemy
+      - run:
+          name: Install Project Dependencies
+          command: |
+            pip install -r requirements.txt
+
+  run-migrations:
+    steps:
+      - run:
+          name: Run Database Migrations
+          command: |
+            python manage.py migrate
+
+  setup-test-environment:
+    steps:
+      - run:
+          name: Setup Test Environment
+          command: |
+            python -m pytest --version
+            python manage.py check
+
+jobs:
+  test-matrix:
+    parameters:
+      python-version:
+        type: string
+      database:
+        type: string
+    executor: python-linux
+    steps:
+      - checkout
+      - install-dependencies
+      - run-migrations
+      - setup-test-environment
+      - run:
+          name: Run Tests
+          command: |
+            echo "Running tests with Python << parameters.python-version >> and << parameters.database >>"
+            pytest --cov=./ --cov-report=xml -v
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: coverage.xml
+          destination: coverage-report
+
+  performance-test:
+    parameters:
+      python-version:
+        type: string
+    executor: python-linux
+    steps:
+      - checkout
+      - install-dependencies
+      - run:
+          name: Run Performance Tests
+          command: |
+            python -m pytest performance_tests/ -v --junitxml=test-results/performance.xml
+      - store_test_results:
+          path: test-results
+
+  security-scan:
+    docker:
+      - image: cimg/python:<< pipeline.parameters.python-version >>
+    steps:
+      - checkout
+      - run:
+          name: Install Security Tools
+          command: |
+            pip install bandit safety
+      - run:
+          name: Run Security Scan
+          command: |
+            bandit -r ./ -f xml -o bandit-results.xml
+            safety check
+      - store_artifacts:
+          path: bandit-results.xml
+          destination: security-report
+
+workflows:
+  version: 2
+  test-matrix:
+    jobs:
+      - test-matrix:
+          matrix:
+            parameters:
+              python-version: ["3.7", "3.8", "3.9", "3.10"]
+              database: ["postgres", "mysql"]
+      - performance-test:
+          matrix:
+            parameters:
+              python-version: ["3.9", "3.10"]
+          requires:
+            - test-matrix
+      - security-scan:
+          requires:
+            - test-matrix

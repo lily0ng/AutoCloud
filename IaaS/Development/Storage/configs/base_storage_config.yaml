@@ -1,0 +1,49 @@
+---
+# Base Storage Configuration
+storage_defaults:
+  mount_options:
+    defaults: ["noatime", "nodiratime"]
+    ssd: ["discard", "noatime"]
+    hdd: ["data=ordered"]
+  
+  filesystem_types:
+    default: "ext4"
+    options:
+      ext4:
+        features: ["has_journal", "extent", "huge_file", "dir_index"]
+      xfs:
+        features: ["reflink=1", "prjquota"]
+      btrfs:
+        features: ["compress=zstd", "noatime"]
+
+  partition_scheme:
+    root:
+      min_size: "20G"
+      filesystem: "ext4"
+      mount_point: "/"
+    boot:
+      size: "1G"
+      filesystem: "ext4"
+      mount_point: "/boot"
+    home:
+      min_size: "10G"
+      filesystem: "ext4"
+      mount_point: "/home"
+    var:
+      min_size: "10G"
+      filesystem: "ext4"
+      mount_point: "/var"
+    tmp:
+      size: "5G"
+      filesystem: "ext4"
+      mount_point: "/tmp"
+
+  lvm:
+    enable: true
+    volume_group: "vg_system"
+    physical_volumes:
+      - "/dev/sda2"
+    logical_volumes:
+      root:
+        size: "100%FREE"
+        mount_point: "/"

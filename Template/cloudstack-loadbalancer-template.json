@@ -1,0 +1,78 @@
+{
+  "name": "CloudStack Load Balancer Template",
+  "description": "Template for creating load balancer rules in CloudStack",
+  "version": "1.0",
+  "parameters": {
+    "lbName": {
+      "type": "string",
+      "description": "Load balancer rule name",
+      "required": true
+    },
+    "publicIpId": {
+      "type": "string",
+      "description": "Public IP address ID",
+      "required": true
+    },
+    "publicPort": {
+      "type": "integer",
+      "description": "Public port",
+      "default": 80
+    },
+    "privatePort": {
+      "type": "integer",
+      "description": "Private port",
+      "default": 80
+    },
+    "algorithm": {
+      "type": "string",
+      "description": "Load balancing algorithm",
+      "default": "roundrobin",
+      "enum": ["roundrobin", "leastconn", "source"]
+    },
+    "protocol": {
+      "type": "string",
+      "description": "Protocol",
+      "default": "tcp",
+      "enum": ["tcp", "udp", "tcp-proxy"]
+    },
+    "networkId": {
+      "type": "string",
+      "description": "Network ID",
+      "required": true
+    }
+  },
+  "resources": {
+    "loadBalancerRule": {
+      "type": "CloudStack::Network::LoadBalancerRule",
+      "properties": {
+        "name": "${lbName}",
+        "publicIpId": "${publicIpId}",
+        "publicPort": "${publicPort}",
+        "privatePort": "${privatePort}",
+        "algorithm": "${algorithm}",
+        "protocol": "${protocol}",
+        "networkId": "${networkId}"
+      }
+    },
+    "healthCheck": {
+      "type": "CloudStack::Network::LBHealthCheck",
+      "properties": {
+        "lbRuleId": "${loadBalancerRule.id}",
+        "healthCheckInterval": 30,
+        "healthCheckTimeout": 5,
+        "unhealthyThreshold": 3,
+        "healthyThreshold": 2
+      }
+    }
+  },
+  "outputs": {
+    "lbRuleId": {
+      "value": "${loadBalancerRule.id}",
+      "description": "Load Balancer Rule ID"
+    },
+    "publicIp": {
+      "value": "${loadBalancerRule.publicIp}",
+      "description": "Public IP address"
+    }
+  }
+}

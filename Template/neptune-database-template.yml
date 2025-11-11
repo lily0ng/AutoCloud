@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon Neptune Database Template'
+
+Parameters:
+  ClusterIdentifier:
+    Type: String
+    Default: neptune-cluster
+
+  DBInstanceClass:
+    Type: String
+    Default: db.r5.large
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::Neptune::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Neptune
+      SubnetIds: !Ref SubnetIds
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Neptune
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8182
+          ToPort: 8182
+          CidrIp: 0.0.0.0/0
+
+  DBCluster:
+    Type: AWS::Neptune::DBCluster
+    Properties:
+      DBClusterIdentifier: !Ref ClusterIdentifier
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref SecurityGroup
+      StorageEncrypted: true
+      BackupRetentionPeriod: 7
+
+  DBInstance:
+    Type: AWS::Neptune::DBInstance
+    Properties:
+      DBInstanceClass: !Ref DBInstanceClass
+      DBClusterIdentifier: !Ref DBCluster
+
+Outputs:
+  ClusterEndpoint:
+    Value: !GetAtt DBCluster.Endpoint
+  ReaderEndpoint:
+    Value: !GetAtt DBCluster.ReadEndpoint

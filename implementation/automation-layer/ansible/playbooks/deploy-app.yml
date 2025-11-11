@@ -1,0 +1,124 @@
+---
+- name: Deploy AutoCloud Application
+  hosts: app_servers
+  become: yes
+  vars:
+    app_version: "1.0.0"
+    app_user: "appuser"
+    app_dir: "/opt/autocloud"
+    
+  tasks:
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - python3-pip
+        state: present
+
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Copy application files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ app_dir }}/{{ item.dest }}"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+      loop:
+        - { src: 'docker-compose.yml', dest: 'docker-compose.yml' }
+        - { src: '.env', dest: '.env' }
+
+    - name: Pull Docker images
+      docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop:
+        - "autocloud/service-a:{{ app_version }}"
+        - "autocloud/service-b:{{ app_version }}"
+        - "autocloud/service-c:{{ app_version }}"
+
+    - name: Start application services
+      docker_compose:
+        project_src: "{{ app_dir }}"
+        state: present
+        pull: yes
+
+    - name: Wait for services to be healthy
+      uri:
+        url: "http://localhost:8080/health"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
+
+    - name: Configure firewall
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "80"
+        - "443"
+        - "8080"
+
+    - name: Enable and start monitoring
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+
+    - name: Create backup cron job
+      cron:
+        name: "Backup application data"
+        minute: "0"
+        hour: "2"
+        job: "/opt/autocloud/scripts/backup.sh"
+        user: "{{ app_user }}"
+
+- name: Configure Load Balancer
+  hosts: load_balancers
+  become: yes
+  
+  tasks:
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Configure Nginx
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/sites-available/autocloud
+      notify: Reload Nginx
+
+    - name: Enable site
+      file:
+        src: /etc/nginx/sites-available/autocloud
+        dest: /etc/nginx/sites-enabled/autocloud
+        state: link
+      notify: Reload Nginx
+
+  handlers:
+    - name: Reload Nginx
+      systemd:
+        name: nginx
+        state: reloaded

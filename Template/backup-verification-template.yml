@@ -1,0 +1,31 @@
+---
+# Backup Verification Template
+apiVersion: backup.autocloud.io/v1
+kind: BackupVerification
+metadata:
+  name: backup-verification
+  namespace: backup-system
+spec:
+  schedule:
+    cron: "0 4 * * *"
+    timezone: "UTC"
+  verification:
+    methods:
+      - checksum
+      - restore-test
+      - integrity-check
+    checksumAlgorithm: SHA256
+    restoreTest:
+      enabled: true
+      testEnvironment: backup-validation
+      sampleSize: 10  # Percentage
+  alerts:
+    - name: verification-failed
+      severity: critical
+    - name: checksum-mismatch
+      severity: critical
+  reporting:
+    enabled: true
+    schedule: daily
+    recipients:
+      - backup-admin@example.com

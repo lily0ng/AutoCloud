@@ -1,0 +1,71 @@
+---
+# LAMP Stack Template
+# Linux + Apache + MySQL + PHP
+
+version: '3.8'
+
+services:
+  apache-php:
+    image: php:8.2-apache
+    container_name: lamp_apache
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./www:/var/www/html
+      - ./apache-config:/etc/apache2/sites-enabled
+      - ./php.ini:/usr/local/etc/php/php.ini
+    environment:
+      APACHE_DOCUMENT_ROOT: /var/www/html
+    depends_on:
+      - mysql
+    networks:
+      - lamp_network
+
+  mysql:
+    image: mysql:8.0
+    container_name: lamp_mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-appdb}
+      MYSQL_USER: ${MYSQL_USER:-appuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppass}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - lamp_network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: lamp_phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    depends_on:
+      - mysql
+    networks:
+      - lamp_network
+
+volumes:
+  mysql_data:
+
+networks:
+  lamp_network:
+
+---
+# php.ini
+upload_max_filesize = 64M
+post_max_size = 64M
+max_execution_time = 300
+memory_limit = 256M
+display_errors = Off
+log_errors = On

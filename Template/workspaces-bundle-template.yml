@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon WorkSpaces Bundle Template'
+
+Parameters:
+  DirectoryId:
+    Type: String
+    Description: Directory Service directory ID
+  BundleId:
+    Type: String
+    Description: WorkSpaces bundle ID
+    Default: wsb-bh8rsxt14
+  UserName:
+    Type: String
+    Description: Username for the WorkSpace
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  WorkSpace:
+    Type: AWS::WorkSpaces::Workspace
+    Properties:
+      BundleId: !Ref BundleId
+      DirectoryId: !Ref DirectoryId
+      UserName: !Ref UserName
+      RootVolumeEncryptionEnabled: true
+      UserVolumeEncryptionEnabled: true
+      VolumeEncryptionKey: !GetAtt KMSKey.Arn
+      WorkspaceProperties:
+        ComputeTypeName: STANDARD
+        RunningMode: AUTO_STOP
+        RunningModeAutoStopTimeoutInMinutes: 60
+
+  KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for WorkSpaces encryption
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+
+Outputs:
+  WorkSpaceId:
+    Value: !Ref WorkSpace

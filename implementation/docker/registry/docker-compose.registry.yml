@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  registry:
+    image: registry:2
+    container_name: docker-registry
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+    volumes:
+      - registry-data:/data
+      - ./auth:/auth
+    networks:
+      - registry-network
+    restart: unless-stopped
+
+  registry-ui:
+    image: joxit/docker-registry-ui:latest
+    container_name: registry-ui
+    ports:
+      - "8081:80"
+    environment:
+      - REGISTRY_TITLE=AutoCloud Docker Registry
+      - REGISTRY_URL=http://registry:5000
+      - DELETE_IMAGES=true
+      - SHOW_CONTENT_DIGEST=true
+    depends_on:
+      - registry
+    networks:
+      - registry-network
+    restart: unless-stopped
+
+networks:
+  registry-network:
+    driver: bridge
+
+volumes:
+  registry-data:

@@ -1,0 +1,43 @@
+{
+  "name": "Fedora 39 Server",
+  "version": "39",
+  "type": "linux",
+  "distribution": "fedora",
+  "architecture": "x86_64",
+  "iso_url": "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Server/x86_64/iso/Fedora-Server-dvd-x86_64-39.iso",
+  "checksum": "sha256:checksum_here",
+  "boot_command": [
+    "<tab> text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/fedora-ks.cfg<enter>"
+  ],
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "20",
+    "min_cpu": "2"
+  },
+  "kickstart": {
+    "install": true,
+    "text": true,
+    "lang": "en_US.UTF-8",
+    "keyboard": "us",
+    "timezone": "America/New_York --utc",
+    "rootpw": "--iscrypted $6$encrypted",
+    "user": {
+      "name": "fedora",
+      "groups": "wheel",
+      "password": "--iscrypted $6$encrypted"
+    },
+    "bootloader": "--location=mbr --boot-drive=sda",
+    "zerombr": true,
+    "clearpart": "--all --initlabel",
+    "autopart": true,
+    "network": "--bootproto=dhcp --device=eth0 --onboot=yes --hostname=fedora39",
+    "firewall": "--enabled --ssh",
+    "selinux": "--enforcing",
+    "packages": [
+      "@^server-product-environment",
+      "openssh-server",
+      "vim",
+      "git"
+    ]
+  }
+}

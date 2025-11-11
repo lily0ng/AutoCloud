@@ -1,0 +1,50 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+  labels:
+    priority: high
+value: 1000000
+globalDefault: false
+description: "High priority class for critical applications"
+preemptionPolicy: PreemptLowerPriority
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: medium-priority
+  labels:
+    priority: medium
+value: 100000
+globalDefault: false
+description: "Medium priority class for standard applications"
+preemptionPolicy: PreemptLowerPriority
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: low-priority
+  labels:
+    priority: low
+value: 10000
+globalDefault: true
+description: "Low priority class for non-critical applications"
+preemptionPolicy: PreemptLowerPriority
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ${APP_NAME}-pod
+  namespace: ${NAMESPACE}
+spec:
+  priorityClassName: high-priority
+  containers:
+  - name: ${CONTAINER_NAME}
+    image: ${IMAGE}
+    resources:
+      requests:
+        memory: "${MEMORY_REQUEST}"
+        cpu: "${CPU_REQUEST}"
+      limits:
+        memory: "${MEMORY_LIMIT}"
+        cpu: "${CPU_LIMIT}"

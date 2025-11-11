@@ -1,0 +1,152 @@
+---
+# Database Backup Template
+# Comprehensive database backup configuration
+
+apiVersion: backup.autocloud.io/v1
+kind: DatabaseBackup
+metadata:
+  name: database-backup
+  namespace: backup-system
+  labels:
+    app: database-backup
+    backup-type: database
+    environment: production
+
+spec:
+  # Database Engines
+  databases:
+    postgresql:
+      - name: production-db
+        host: postgres.example.com
+        port: 5432
+        databases:
+          - app_db
+          - analytics_db
+        credentialsSecret: postgres-backup-creds
+        options:
+          format: custom
+          compress: 9
+          blobs: true
+          
+    mysql:
+      - name: wordpress-db
+        host: mysql.example.com
+        port: 3306
+        databases:
+          - wordpress
+          - ecommerce
+        credentialsSecret: mysql-backup-creds
+        options:
+          singleTransaction: true
+          routines: true
+          triggers: true
+          
+    mongodb:
+      - name: userdata-db
+        host: mongo.example.com
+        port: 27017
+        databases:
+          - users
+          - sessions
+        credentialsSecret: mongo-backup-creds
+        options:
+          oplog: true
+          gzip: true
+          
+    redis:
+      - name: cache-db
+        host: redis.example.com
+        port: 6379
+        credentialsSecret: redis-backup-creds
+        options:
+          rdb: true
+          aof: true
+
+  # Backup Schedule
+  schedule:
+    full:
+      cron: "0 1 * * 0"  # Weekly full backup
+    incremental:
+      cron: "0 2 * * 1-6"  # Daily incremental
+    transactionLog:
+      interval: 15m  # Continuous log backup
+
+  # Destination
+  destination:
+    type: s3
+    bucket: database-backups
+    region: us-east-1
+    prefix: "db-backups/${ENGINE}/${DATABASE}/${DATE}/"
+    encryption:
+      enabled: true
+      type: SSE-KMS
+
+  # Backup Options
+  options:
+    consistency:
+      enabled: true
+      method: snapshot  # snapshot, lock, quiesce
+      
+    compression:
+      enabled: true
+      algorithm: gzip
+      level: 9
+      
+    encryption:
+      enabled: true
+      algorithm: AES-256-GCM
+      
+    parallelism:
+      enabled: true
+      threads: 4
+      
+    verification:
+      enabled: true
+      restoreTest: true
+      testDatabase: backup_validation
+
+  # Point-in-Time Recovery
+  pitr:
+    enabled: true
+    retentionDays: 30
+    archiveWAL: true
+    archiveLocation: s3://db-wal-archive/
+
+  # Retention Policy
+  retention:
+    full:
+      weekly: 4
+      monthly: 12
+    incremental:
+      daily: 7
+    transactionLogs:
+      days: 30
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    metrics:
+      - backup_size_bytes
+      - backup_duration_seconds
+      - database_size_bytes
+      - transaction_log_size_bytes
+    alerts:
+      - name: backup-failed
+        severity: critical
+      - name: backup-duration-exceeded
+        threshold: 3600
+        severity: warning
+      - name: database-size-growth
+        threshold: 20
+        severity: info
+
+  # Recovery Testing
+  recovery:
+    testing:
+      enabled: true
+      schedule: "0 8 * * 0"
+      testEnvironment: db-recovery-test
+      validateData: true
+    objectives:
+      rpo: 15m
+      rto: 1h

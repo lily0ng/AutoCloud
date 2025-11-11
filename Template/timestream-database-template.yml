@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon Timestream Database Template'
+
+Parameters:
+  DatabaseName:
+    Type: String
+    Default: timestream-db
+
+  TableName:
+    Type: String
+    Default: timestream-table
+
+  MemoryStoreRetentionPeriodInHours:
+    Type: Number
+    Default: 24
+
+  MagneticStoreRetentionPeriodInDays:
+    Type: Number
+    Default: 365
+
+Resources:
+  TimestreamDatabase:
+    Type: AWS::Timestream::Database
+    Properties:
+      DatabaseName: !Ref DatabaseName
+
+  TimestreamTable:
+    Type: AWS::Timestream::Table
+    Properties:
+      DatabaseName: !Ref TimestreamDatabase
+      TableName: !Ref TableName
+      RetentionProperties:
+        MemoryStoreRetentionPeriodInHours: !Ref MemoryStoreRetentionPeriodInHours
+        MagneticStoreRetentionPeriodInDays: !Ref MagneticStoreRetentionPeriodInDays
+
+Outputs:
+  DatabaseArn:
+    Value: !GetAtt TimestreamDatabase.Arn
+  TableArn:
+    Value: !GetAtt TimestreamTable.Arn

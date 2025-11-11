@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Batch Compute Environment Template'
+
+Parameters:
+  ComputeEnvironmentName:
+    Type: String
+    Default: MyBatchComputeEnvironment
+
+  MinvCpus:
+    Type: Number
+    Default: 0
+
+  MaxvCpus:
+    Type: Number
+    Default: 256
+
+  DesiredvCpus:
+    Type: Number
+    Default: 4
+
+  InstanceTypes:
+    Type: CommaDelimitedList
+    Default: 'optimal'
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  BatchServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: batch.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+
+  BatchComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      ComputeEnvironmentName: !Ref ComputeEnvironmentName
+      Type: MANAGED
+      State: ENABLED
+      ServiceRole: !GetAtt BatchServiceRole.Arn
+      ComputeResources:
+        Type: EC2
+        MinvCpus: !Ref MinvCpus
+        MaxvCpus: !Ref MaxvCpus
+        DesiredvCpus: !Ref DesiredvCpus
+        InstanceTypes: !Ref InstanceTypes
+        Subnets: !Ref SubnetIds
+        SecurityGroupIds:
+          - !Ref SecurityGroup
+        InstanceRole: !GetAtt InstanceProfile.Arn
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Batch compute environment
+      VpcId: !Ref VpcId
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  JobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      JobQueueName: !Sub '${ComputeEnvironmentName}-Queue'
+      Priority: 1
+      State: ENABLED
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref BatchComputeEnvironment
+
+Outputs:
+  ComputeEnvironmentArn:
+    Value: !Ref BatchComputeEnvironment
+  JobQueueArn:
+    Value: !Ref JobQueue

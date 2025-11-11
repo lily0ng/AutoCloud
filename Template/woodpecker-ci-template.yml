@@ -1,0 +1,64 @@
+# Woodpecker CI Template
+pipeline:
+  restore-cache:
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      restore: true
+      cache_key: "{{ .Repo.Name }}"
+      archive_format: "gzip"
+      mount:
+        - 'node_modules'
+  
+  install:
+    image: node:18
+    commands:
+      - npm ci
+  
+  lint:
+    image: node:18
+    commands:
+      - npm run lint
+  
+  test:
+    image: node:18
+    commands:
+      - npm run test
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@database:5432/testdb
+  
+  build:
+    image: node:18
+    commands:
+      - npm run build
+  
+  docker:
+    image: plugins/docker
+    settings:
+      repo: myregistry/myapp
+      tags:
+        - ${CI_COMMIT_SHA:0:8}
+        - latest
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    when:
+      branch: [main, develop]
+  
+  deploy:
+    image: bitnami/kubectl
+    commands:
+      - kubectl set image deployment/myapp myapp=myregistry/myapp:${CI_COMMIT_SHA:0:8}
+    environment:
+      KUBECONFIG:
+        from_secret: kubeconfig
+    when:
+      branch: main
+
+services:
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: testdb

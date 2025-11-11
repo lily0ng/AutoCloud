@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  emby:
+    image: lscr.io/linuxserver/emby:latest
+    container_name: emby
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    ports:
+      - "8096:8096"
+      - "8920:8920"
+    volumes:
+      - emby_config:/config
+      - /path/to/tv:/data/tvshows
+      - /path/to/movies:/data/movies
+    networks:
+      - emby-net
+    restart: unless-stopped
+
+volumes:
+  emby_config:
+
+networks:
+  emby-net:
+    driver: bridge

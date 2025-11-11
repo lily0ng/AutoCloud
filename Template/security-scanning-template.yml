@@ -1,0 +1,134 @@
+---
+# Security Scanning Template
+# Vulnerability scanning and SAST/DAST
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-scan-config
+  namespace: cicd
+data:
+  trivy.yaml: |
+    severity: HIGH,CRITICAL
+    vuln-type: os,library
+    security-checks: vuln,config,secret
+    ignore-unfixed: true
+    format: json
+    output: /reports/trivy-report.json
+  
+  semgrep.yaml: |
+    rules:
+      - id: sql-injection
+        patterns:
+          - pattern: $DB.query($QUERY)
+          - pattern-not: $DB.query("...")
+        message: Potential SQL injection
+        severity: ERROR
+      
+      - id: xss-vulnerability
+        patterns:
+          - pattern: $HTML = $USER_INPUT
+        message: Potential XSS vulnerability
+        severity: WARNING
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: trivy-scan
+  namespace: cicd
+spec:
+  params:
+    - name: image
+      default: ""
+  workspaces:
+    - name: source
+  steps:
+    - name: filesystem-scan
+      image: aquasec/trivy:latest
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        trivy fs --severity HIGH,CRITICAL --format json --output /workspace/trivy-fs-report.json .
+    
+    - name: image-scan
+      image: aquasec/trivy:latest
+      script: |
+        #!/bin/sh
+        if [ -n "$(params.image)" ]; then
+          trivy image --severity HIGH,CRITICAL $(params.image)
+        fi
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: semgrep-scan
+  namespace: cicd
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: scan
+      image: returntocorp/semgrep:latest
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        semgrep --config=auto --json --output=/workspace/semgrep-report.json .
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: owasp-zap
+  namespace: cicd
+spec:
+  params:
+    - name: target-url
+      default: http://test.example.com
+  steps:
+    - name: baseline-scan
+      image: owasp/zap2docker-stable:latest
+      script: |
+        #!/bin/sh
+        zap-baseline.py -t $(params.target-url) -r /zap/wrk/baseline-report.html
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: snyk-scan
+  namespace: cicd
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: test
+      image: snyk/snyk:node
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: SNYK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: snyk-token
+              key: token
+      script: |
+        #!/bin/sh
+        snyk test --json --json-file-output=/workspace/snyk-report.json
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: security-scan-scheduled
+  namespace: cicd
+spec:
+  schedule: "0 3 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: trivy
+            image: aquasec/trivy:latest
+            command:
+            - sh
+            - -c
+            - |
+              trivy image --severity HIGH,CRITICAL myapp:latest
+          restartPolicy: OnFailure

@@ -1,0 +1,87 @@
+# Bitbucket Pipelines Template
+image: node:18
+
+definitions:
+  caches:
+    npm: ~/.npm
+  
+  services:
+    docker:
+      memory: 2048
+    postgres:
+      image: postgres:15
+      variables:
+        POSTGRES_DB: testdb
+        POSTGRES_USER: testuser
+        POSTGRES_PASSWORD: testpass
+  
+  steps:
+    - step: &build-test
+        name: Build and Test
+        caches:
+          - npm
+        script:
+          - npm ci
+          - npm run lint
+          - npm run test
+        artifacts:
+          - coverage/**
+    
+    - step: &security-scan
+        name: Security Scan
+        script:
+          - npm audit --audit-level=moderate
+          - npx snyk test
+    
+    - step: &docker-build
+        name: Build Docker Image
+        services:
+          - docker
+        script:
+          - export IMAGE_NAME=$BITBUCKET_REPO_SLUG:$BITBUCKET_COMMIT
+          - docker build -t $IMAGE_NAME .
+          - docker tag $IMAGE_NAME $DOCKER_REGISTRY/$IMAGE_NAME
+          - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+          - docker push $DOCKER_REGISTRY/$IMAGE_NAME
+    
+    - step: &deploy-staging
+        name: Deploy to Staging
+        deployment: staging
+        script:
+          - pipe: atlassian/kubectl-run:3.2.0
+            variables:
+              KUBE_CONFIG: $KUBE_CONFIG_STAGING
+              KUBECTL_COMMAND: 'set image deployment/myapp myapp=$DOCKER_REGISTRY/$IMAGE_NAME'
+              RESOURCE_NAMESPACE: 'staging'
+
+pipelines:
+  default:
+    - step: *build-test
+    - step: *security-scan
+  
+  branches:
+    develop:
+      - step: *build-test
+      - step: *security-scan
+      - step: *docker-build
+      - step: *deploy-staging
+    
+    main:
+      - step: *build-test
+      - step: *security-scan
+      - step: *docker-build
+      - step:
+          name: Deploy to Production
+          deployment: production
+          trigger: manual
+          script:
+            - pipe: atlassian/kubectl-run:3.2.0
+              variables:
+                KUBE_CONFIG: $KUBE_CONFIG_PROD
+                KUBECTL_COMMAND: 'set image deployment/myapp myapp=$DOCKER_REGISTRY/$IMAGE_NAME'
+                RESOURCE_NAMESPACE: 'production'
+  
+  pull-requests:
+    '**':
+      - step: *build-test
+      - step: *security-scan

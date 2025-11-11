@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon SNS Topic Template'
+
+Parameters:
+  TopicName:
+    Type: String
+    Default: MySnsTopic
+
+Resources:
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Ref TopicName
+      DisplayName: !Ref TopicName
+      Subscription:
+        - Endpoint: email@example.com
+          Protocol: email
+
+Outputs:
+  TopicArn:
+    Value: !Ref SNSTopic
+  TopicName:
+    Value: !GetAtt SNSTopic.TopicName

@@ -1,0 +1,44 @@
+loadBalancer:
+  nginx:
+    enabled: true
+    replicaCount: 3
+    
+    config:
+      workerProcesses: auto
+      workerConnections: 2048
+      keepaliveTimeout: 65
+      clientMaxBodySize: 50m
+      
+    ssl:
+      enabled: true
+      redirectToHttps: true
+      certificates:
+        - secretName: tls-cert
+          hosts:
+            - example.com
+            - api.example.com
+            
+    upstreams:
+      - name: api-service
+        service: api
+        port: 8080
+        maxFails: 3
+        failTimeout: 30s
+        
+    rules:
+      - host: api.example.com
+        http:
+          paths:
+            - path: /api
+              backend:
+                serviceName: api-service
+                servicePort: 8080
+                
+    monitoring:
+      enabled: true
+      prometheusRules:
+        - alert: HighErrorRate
+          expr: sum(rate(nginx_http_requests_total{status=~"5.."}[5m])) / sum(rate(nginx_http_requests_total[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical

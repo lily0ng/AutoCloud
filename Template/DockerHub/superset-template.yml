@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: superset-postgres
+    environment:
+      POSTGRES_DB: superset
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - superset-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: superset-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - superset-net
+    restart: unless-stopped
+
+  superset:
+    image: apache/superset:3.0.0
+    container_name: superset
+    environment:
+      - SUPERSET_SECRET_KEY=your-secret-key-here
+      - DATABASE_DB=superset
+      - DATABASE_HOST=postgres
+      - DATABASE_PASSWORD=superset123
+      - DATABASE_USER=superset
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_home:/app/superset_home
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - superset-net
+    command: >
+      bash -c "superset db upgrade &&
+               superset fab create-admin --username admin --firstname Admin --lastname User --email admin@example.com --password admin &&
+               superset init &&
+               superset run -h 0.0.0.0 -p 8088"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  superset_home:
+
+networks:
+  superset-net:
+    driver: bridge

@@ -1,0 +1,74 @@
+{
+    "firewalls": [
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.100",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.101",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.102",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.103",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.104",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.105",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.106",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.107",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.108",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        },
+        {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.109",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_secret"
+        }
+    ]
+}

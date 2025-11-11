@@ -1,0 +1,51 @@
+{
+  "name": "CloudStack Firewall Rule Template",
+  "description": "Template for creating firewall rules in CloudStack",
+  "version": "1.0",
+  "parameters": {
+    "ipAddressId": {
+      "type": "string",
+      "description": "IP address ID",
+      "required": true
+    },
+    "protocol": {
+      "type": "string",
+      "description": "Protocol",
+      "default": "tcp",
+      "enum": ["tcp", "udp", "icmp", "all"]
+    },
+    "startPort": {
+      "type": "integer",
+      "description": "Start port",
+      "default": 80
+    },
+    "endPort": {
+      "type": "integer",
+      "description": "End port",
+      "default": 80
+    },
+    "cidrList": {
+      "type": "array",
+      "description": "List of CIDR blocks",
+      "default": ["0.0.0.0/0"]
+    }
+  },
+  "resources": {
+    "firewallRule": {
+      "type": "CloudStack::Network::FirewallRule",
+      "properties": {
+        "ipAddressId": "${ipAddressId}",
+        "protocol": "${protocol}",
+        "startPort": "${startPort}",
+        "endPort": "${endPort}",
+        "cidrList": "${cidrList}"
+      }
+    }
+  },
+  "outputs": {
+    "ruleId": {
+      "value": "${firewallRule.id}",
+      "description": "Firewall Rule ID"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@1.5
+
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/python:3.9
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+          packages:
+            - pytest
+            - pytest-cov
+      - run:
+          name: Run tests
+          command: |
+            pytest --cov=./ --cov-report=xml
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: coverage.xml
+          destination: coverage-report
+
+  lint:
+    docker:
+      - image: cimg/python:3.9
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+          packages:
+            - flake8
+            - black
+      - run:
+          name: Run linting
+          command: |
+            flake8 .
+            black . --check
+
+workflows:
+  main:
+    jobs:
+      - build-and-test
+      - lint

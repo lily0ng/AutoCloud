@@ -1,0 +1,81 @@
+---
+- name: Kubernetes Application Deployment
+  hosts: localhost
+  gather_facts: false
+  vars:
+    namespace: production
+    app_name: web-application
+    replicas: 3
+    container_image: nginx:latest
+    container_port: 80
+    
+  tasks:
+    - name: Create namespace
+      k8s:
+        name: "{{ namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Create deployment
+      k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+          spec:
+            replicas: "{{ replicas }}"
+            selector:
+              matchLabels:
+                app: "{{ app_name }}"
+            template:
+              metadata:
+                labels:
+                  app: "{{ app_name }}"
+              spec:
+                containers:
+                - name: "{{ app_name }}"
+                  image: "{{ container_image }}"
+                  ports:
+                  - containerPort: "{{ container_port }}"
+                  resources:
+                    requests:
+                      memory: "64Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "128Mi"
+                      cpu: "500m"
+
+    - name: Create service
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+          spec:
+            type: LoadBalancer
+            ports:
+            - port: 80
+              targetPort: "{{ container_port }}"
+            selector:
+              app: "{{ app_name }}"
+
+    - name: Create ConfigMap
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ app_name }}-config"
+            namespace: "{{ namespace }}"
+          data:
+            app.properties: |
+              environment=production
+              logging.level=INFO

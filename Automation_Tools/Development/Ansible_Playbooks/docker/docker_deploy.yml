@@ -1,0 +1,62 @@
+---
+- name: Docker Container Deployment
+  hosts: docker_hosts
+  become: yes
+  vars:
+    container_name: web_app
+    image_name: nginx:latest
+    container_port: 80
+    host_port: 8080
+    
+  tasks:
+    - name: Install Docker dependencies
+      apt:
+        name: 
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+        state: present
+
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Pull Docker image
+      docker_image:
+        name: "{{ image_name }}"
+        source: pull
+        force_source: yes
+
+    - name: Run Docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ host_port }}:{{ container_port }}"
+        volumes:
+          - /data/web_app:/usr/share/nginx/html
+        env:
+          NGINX_HOST: web_app
+          NGINX_PORT: "{{ container_port }}"

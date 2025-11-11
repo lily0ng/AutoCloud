@@ -1,0 +1,26 @@
+---
+# Rocket.Chat Template
+version: '3.8'
+services:
+  rocketchat:
+    image: rocket.chat:latest
+    restart: always
+    ports: ["3000:3000"]
+    environment:
+      MONGO_URL: mongodb://mongodb:27017/rocketchat
+      MONGO_OPLOG_URL: mongodb://mongodb:27017/local
+      ROOT_URL: http://localhost:3000
+      PORT: 3000
+    depends_on: [mongodb]
+  mongodb:
+    image: mongo:6.0
+    restart: always
+    command: mongod --oplogSize 128 --replSet rs0
+    volumes: [mongodb_data:/data/db]
+  mongo-init-replica:
+    image: mongo:6.0
+    command: >
+      bash -c "sleep 10 && mongo mongodb:27017/rocketchat --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"mongodb:27017\"}]})'"
+    depends_on: [mongodb]
+volumes:
+  mongodb_data:

@@ -1,0 +1,56 @@
+containers:
+  orchestrator: kubernetes
+  
+  kubernetes:
+    version: "1.24"
+    high_availability: true
+    
+    node_pools:
+      default:
+        min_nodes: 3
+        max_nodes: 10
+        machine_type: "t3.large"
+        disk_size_gb: 100
+        
+      memory_optimized:
+        min_nodes: 2
+        max_nodes: 8
+        machine_type: "r5.xlarge"
+        disk_size_gb: 200
+        
+    networking:
+      pod_cidr: "172.16.0.0/16"
+      service_cidr: "172.17.0.0/16"
+      
+    addons:
+      monitoring:
+        prometheus: true
+        grafana: true
+      logging:
+        elasticsearch: true
+        kibana: true
+      ingress:
+        nginx: true
+        cert_manager: true
+        
+  registry:
+    type: ecr
+    scan_on_push: true
+    retention_policy:
+      days: 90
+      untagged_images: 7
+      
+  policies:
+    resource_quotas:
+      cpu_request: "80%"
+      memory_request: "80%"
+      
+    pod_security:
+      privileged: false
+      host_network: false
+      
+    image_policy:
+      allowed_registries:
+        - "ecr.amazonaws.com"
+        - "gcr.io"
+        - "azure.io"

@@ -1,0 +1,147 @@
+---
+# VM Snapshot Template
+# Virtual machine snapshot and backup configuration
+
+apiVersion: backup.autocloud.io/v1
+kind: VMSnapshot
+metadata:
+  name: vm-snapshot
+  namespace: backup-system
+  labels:
+    app: vm-snapshot
+    backup-type: vm
+    environment: production
+
+spec:
+  # Hypervisor Configuration
+  hypervisor:
+    type: vmware  # vmware, hyperv, kvm, xen
+    vcenter:
+      host: vcenter.example.com
+      port: 443
+      credentialsSecret: vcenter-credentials
+      datacenter: DC1
+      cluster: Cluster1
+
+  # VM Selection
+  vms:
+    # Individual VMs
+    - name: prod-web-01
+      uuid: 42305ca8-9e4a-4a3e-a1e1-123456789abc
+      snapshotType: full
+      quiesce: true
+      memory: true
+      
+    - name: prod-app-01
+      uuid: 52305ca8-9e4a-4a3e-a1e1-123456789def
+      snapshotType: full
+      quiesce: true
+      
+    # VM selection by tags
+    tags:
+      - environment: production
+      - backup: enabled
+      
+    # VM selection by folder
+    folders:
+      - /Production/WebServers
+      - /Production/AppServers
+
+  # Snapshot Schedule
+  schedule:
+    full:
+      cron: "0 1 * * 0"  # Weekly
+    incremental:
+      cron: "0 2 * * 1-6"  # Daily
+    crashConsistent:
+      cron: "0 */6 * * *"  # Every 6 hours
+
+  # Snapshot Options
+  options:
+    # Quiesce settings
+    quiesce:
+      enabled: true
+      timeout: 300
+      vmwareTools: required
+      
+    # Memory snapshot
+    memory:
+      enabled: false  # Faster snapshots without memory
+      
+    # CBT (Changed Block Tracking)
+    cbt:
+      enabled: true
+      resetOnFailure: true
+      
+    # Snapshot consolidation
+    consolidation:
+      enabled: true
+      schedule: "0 4 * * *"
+      maxChainLength: 7
+      
+    # Compression
+    compression:
+      enabled: true
+      algorithm: zstd
+      level: 3
+      
+    # Encryption
+    encryption:
+      enabled: true
+      algorithm: AES-256-GCM
+
+  # Destination
+  destination:
+    type: s3
+    bucket: vm-snapshots
+    region: us-east-1
+    prefix: "vm-backup/${VM_NAME}/${DATE}/"
+    storageClass: STANDARD
+
+  # Retention Policy
+  retention:
+    snapshots:
+      daily: 7
+      weekly: 4
+      monthly: 12
+    consolidateOld: true
+    deleteOrphaned: true
+
+  # Replication
+  replication:
+    enabled: true
+    targets:
+      - name: dr-site
+        vcenter: vcenter-dr.example.com
+        datacenter: DC2
+        cluster: Cluster2
+        network: DR-Network
+        datastore: DR-Datastore
+        schedule: "0 */4 * * *"
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    metrics:
+      - snapshot_size_bytes
+      - snapshot_duration_seconds
+      - vm_snapshot_count
+      - cbt_enabled_status
+    alerts:
+      - name: snapshot-failed
+        severity: critical
+      - name: snapshot-chain-too-long
+        threshold: 7
+        severity: warning
+      - name: cbt-disabled
+        severity: warning
+
+  # Recovery
+  recovery:
+    instantRecovery:
+      enabled: true
+      mountDatastore: Recovery-Datastore
+    testing:
+      enabled: true
+      schedule: "0 8 1 * *"
+      testNetwork: Isolated-Test-Network

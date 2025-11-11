@@ -1,0 +1,225 @@
+// Jenkins Pipeline Template
+// Declarative pipeline with comprehensive stages
+
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_REGISTRY = 'docker.io'
+        DOCKER_IMAGE = 'myapp'
+        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
+        KUBECONFIG_CREDENTIALS_ID = 'kubeconfig'
+        SONARQUBE_URL = 'http://sonarqube:9000'
+        SLACK_CHANNEL = '#deployments'
+    }
+    
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+        timeout(time: 1, unit: 'HOURS')
+        disableConcurrentBuilds()
+    }
+    
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'production'], description: 'Deployment environment')
+        booleanParam(name: 'RUN_TESTS', defaultValue: true, description: 'Run tests')
+        booleanParam(name: 'DEPLOY', defaultValue: false, description: 'Deploy to environment')
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(
+                        script: "git rev-parse --short HEAD",
+                        returnStdout: true
+                    ).trim()
+                    env.IMAGE_TAG = "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE}:${env.GIT_COMMIT_SHORT}"
+                }
+            }
+        }
+        
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    sh 'npm ci'
+                }
+            }
+        }
+        
+        stage('Lint') {
+            steps {
+                sh 'npm run lint'
+            }
+        }
+        
+        stage('Unit Tests') {
+            when {
+                expression { params.RUN_TESTS == true }
+            }
+            steps {
+                sh 'npm run test:unit'
+            }
+            post {
+                always {
+                    junit 'test-results/junit.xml'
+                    publishHTML([
+                        reportDir: 'coverage',
+                        reportFiles: 'index.html',
+                        reportName: 'Coverage Report'
+                    ])
+                }
+            }
+        }
+        
+        stage('Integration Tests') {
+            when {
+                expression { params.RUN_TESTS == true }
+            }
+            steps {
+                sh 'docker-compose -f docker-compose.test.yml up -d'
+                sh 'npm run test:integration'
+            }
+            post {
+                always {
+                    sh 'docker-compose -f docker-compose.test.yml down -v'
+                }
+            }
+        }
+        
+        stage('Code Quality Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv('SonarQube') {
+                        sh 'npm run sonar-scanner'
+                    }
+                }
+            }
+        }
+        
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            parallel {
+                stage('Dependency Check') {
+                    steps {
+                        sh 'npm audit --audit-level=moderate'
+                    }
+                }
+                stage('SAST Scan') {
+                    steps {
+                        sh 'semgrep --config=auto .'
+                    }
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build(env.IMAGE_TAG)
+                }
+            }
+        }
+        
+        stage('Container Security Scan') {
+            steps {
+                sh "trivy image --severity HIGH,CRITICAL ${env.IMAGE_TAG}"
+            }
+        }
+        
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry("https://${env.DOCKER_REGISTRY}", env.DOCKER_CREDENTIALS_ID) {
+                        docker.image(env.IMAGE_TAG).push()
+                        docker.image(env.IMAGE_TAG).push('latest')
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Environment') {
+            when {
+                expression { params.DEPLOY == true }
+            }
+            steps {
+                script {
+                    withKubeConfig([credentialsId: env.KUBECONFIG_CREDENTIALS_ID]) {
+                        sh """
+                            kubectl set image deployment/myapp \
+                                myapp=${env.IMAGE_TAG} \
+                                -n ${params.ENVIRONMENT}
+                            
+                            kubectl rollout status deployment/myapp \
+                                -n ${params.ENVIRONMENT} \
+                                --timeout=5m
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Smoke Tests') {
+            when {
+                expression { params.DEPLOY == true }
+            }
+            steps {
+                script {
+                    sh """
+                        curl -f https://${params.ENVIRONMENT}.example.com/health || exit 1
+                    """
+                }
+            }
+        }
+        
+        stage('Performance Tests') {
+            when {
+                expression { params.ENVIRONMENT == 'staging' }
+            }
+            steps {
+                sh 'npm run test:performance'
+            }
+            post {
+                always {
+                    publishHTML([
+                        reportDir: 'performance-results',
+                        reportFiles: 'index.html',
+                        reportName: 'Performance Report'
+                    ])
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            script {
+                slackSend(
+                    channel: env.SLACK_CHANNEL,
+                    color: 'good',
+                    message: "✅ Build #${env.BUILD_NUMBER} succeeded\nBranch: ${env.GIT_BRANCH}\nCommit: ${env.GIT_COMMIT_SHORT}"
+                )
+            }
+        }
+        failure {
+            script {
+                slackSend(
+                    channel: env.SLACK_CHANNEL,
+                    color: 'danger',
+                    message: "❌ Build #${env.BUILD_NUMBER} failed\nBranch: ${env.GIT_BRANCH}\nCommit: ${env.GIT_COMMIT_SHORT}"
+                )
+            }
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

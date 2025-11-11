@@ -1,0 +1,39 @@
+network:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: selfsigned
+    
+  serviceMesh:
+    enabled: false
+    
+  dns:
+    domain: dev.local
+    
+  loadBalancer:
+    type: NodePort
+    
+  networkPolicies:
+    enabled: false
+    
+  cors:
+    enabled: true
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    
+  metrics:
+    enabled: true
+    
+  debug:
+    enabled: true
+    endpoints:
+      - /debug
+      - /metrics
+      - /health

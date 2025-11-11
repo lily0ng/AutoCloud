@@ -1,0 +1,151 @@
+---
+# Compliance Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-policies
+  namespace: security
+data:
+  pci-dss.yaml: |
+    # PCI-DSS Compliance Requirements
+    requirements:
+      - id: 1.1
+        description: "Firewall configuration standards"
+        controls:
+          - network_policies
+          - firewall_rules
+      - id: 2.1
+        description: "Change default passwords"
+        controls:
+          - password_policy
+          - secret_rotation
+      - id: 3.4
+        description: "Encrypt cardholder data"
+        controls:
+          - encryption_at_rest
+          - encryption_in_transit
+      - id: 8.2
+        description: "Multi-factor authentication"
+        controls:
+          - mfa_enabled
+          - oauth2_proxy
+      - id: 10.1
+        description: "Audit trails"
+        controls:
+          - audit_logging
+          - log_retention
+  
+  hipaa.yaml: |
+    # HIPAA Compliance Requirements
+    requirements:
+      - id: 164.308
+        description: "Administrative Safeguards"
+        controls:
+          - access_control
+          - audit_controls
+          - integrity_controls
+      - id: 164.310
+        description: "Physical Safeguards"
+        controls:
+          - facility_access
+          - workstation_security
+      - id: 164.312
+        description: "Technical Safeguards"
+        controls:
+          - encryption
+          - audit_logging
+          - authentication
+  
+  gdpr.yaml: |
+    # GDPR Compliance Requirements
+    requirements:
+      - id: Article_32
+        description: "Security of processing"
+        controls:
+          - encryption
+          - pseudonymization
+          - backup_recovery
+      - id: Article_33
+        description: "Breach notification"
+        controls:
+          - incident_response
+          - alerting
+      - id: Article_17
+        description: "Right to erasure"
+        controls:
+          - data_deletion
+          - retention_policy
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-scanning
+  namespace: security
+data:
+  trivy-config.yaml: |
+    severity: HIGH,CRITICAL
+    vuln-type: os,library
+    ignore-unfixed: true
+    format: json
+    output: /reports/trivy-report.json
+  
+  falco-rules.yaml: |
+    - rule: Unauthorized Process
+      desc: Detect unauthorized process execution
+      condition: spawned_process and not proc.name in (allowed_processes)
+      output: "Unauthorized process started (user=%user.name command=%proc.cmdline)"
+      priority: WARNING
+    
+    - rule: Sensitive File Access
+      desc: Detect access to sensitive files
+      condition: open_read and fd.name in (sensitive_files)
+      output: "Sensitive file accessed (user=%user.name file=%fd.name)"
+      priority: CRITICAL
+    
+    - rule: Privilege Escalation
+      desc: Detect privilege escalation attempts
+      condition: spawned_process and proc.name in (setuid_binaries)
+      output: "Privilege escalation detected (user=%user.name command=%proc.cmdline)"
+      priority: CRITICAL
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-scan
+  namespace: security
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: compliance-scanner
+            image: aquasec/trivy:latest
+            command:
+            - sh
+            - -c
+            - |
+              trivy image --severity HIGH,CRITICAL --format json --output /reports/scan-$(date +%Y%m%d).json
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-config
+  namespace: security
+data:
+  audit.yaml: |
+    apiVersion: audit.k8s.io/v1
+    kind: Policy
+    rules:
+    - level: Metadata
+      resources:
+      - group: ""
+        resources: ["secrets"]
+    - level: RequestResponse
+      verbs: ["create", "update", "patch", "delete"]
+    - level: Request
+      userGroups: ["system:authenticated"]
+    omitStages:
+    - RequestReceived

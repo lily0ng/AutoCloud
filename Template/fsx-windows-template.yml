@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon FSx for Windows File Server Template'
+
+Parameters:
+  FileSystemName:
+    Type: String
+    Default: MyFSxWindows
+
+  StorageCapacity:
+    Type: Number
+    Default: 32
+    Description: Storage capacity in GB (minimum 32 GB)
+
+  ThroughputCapacity:
+    Type: Number
+    Default: 8
+    AllowedValues: [8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+  ActiveDirectoryId:
+    Type: String
+    Description: AWS Managed Microsoft AD directory ID
+
+Resources:
+  FSxFileSystem:
+    Type: AWS::FSx::FileSystem
+    Properties:
+      FileSystemType: WINDOWS
+      StorageCapacity: !Ref StorageCapacity
+      SubnetIds: !Ref SubnetIds
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      WindowsConfiguration:
+        ThroughputCapacity: !Ref ThroughputCapacity
+        ActiveDirectoryId: !Ref ActiveDirectoryId
+        AutomaticBackupRetentionDays: 7
+        DailyAutomaticBackupStartTime: '01:00'
+        WeeklyMaintenanceStartTime: '1:02:00'
+        DeploymentType: MULTI_AZ_1
+        PreferredSubnetId: !Select [0, !Ref SubnetIds]
+      Tags:
+        - Key: Name
+          Value: !Ref FileSystemName
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for FSx Windows
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 5985
+          ToPort: 5985
+          CidrIp: 0.0.0.0/0
+
+Outputs:
+  FileSystemId:
+    Value: !Ref FSxFileSystem
+  DNSName:
+    Value: !GetAtt FSxFileSystem.DNSName

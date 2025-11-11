@@ -1,0 +1,60 @@
+---
+esxi_configuration:
+  version: "7.0 U3"
+  system:
+    hostname: "esxi-host"
+    dns_servers:
+      - "8.8.8.8"
+      - "8.8.4.4"
+    ntp_servers:
+      - "pool.ntp.org"
+    syslog_server: "syslog.local"
+  
+  network:
+    vmkernel:
+      management:
+        ip: "192.168.1.10"
+        netmask: "255.255.255.0"
+        gateway: "192.168.1.1"
+      vmotion:
+        ip: "192.168.2.10"
+        netmask: "255.255.255.0"
+      storage:
+        ip: "192.168.3.10"
+        netmask: "255.255.255.0"
+    
+    virtual_switches:
+      vSwitch0:
+        ports: 128
+        security:
+          promiscuous_mode: false
+          mac_changes: false
+          forged_transmits: false
+        nics:
+          - vmnic0
+          - vmnic1
+  
+  storage:
+    datastores:
+      local_storage:
+        type: "VMFS-6"
+        devices:
+          - "naa.600xxx"
+      shared_storage:
+        type: "NFS"
+        server: "nas.local"
+        share: "/volume1/esxi"
+  
+  advanced_settings:
+    Mem.ShareForceSalting: 0
+    Net.TcpipHeapSize: 32
+    Net.TcpipHeapMax: 512
+    
+  services:
+    enabled:
+      - "SSH"
+      - "vSphere Web Client"
+      - "vMotion"
+    disabled:
+      - "Shell"
+      - "SNMP"

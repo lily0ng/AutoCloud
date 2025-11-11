@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Aurora PostgreSQL Cluster with Read Replicas'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Description: Environment name
+    Default: Production
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where the database will be deployed
+
+  DatabaseSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of subnet IDs for the database cluster
+
+  DBName:
+    Type: String
+    Description: Database name
+    Default: myapp
+    MinLength: 1
+    MaxLength: 64
+
+  DBInstanceClass:
+    Type: String
+    Description: Database instance class
+    Default: db.r5.large
+    AllowedValues:
+      - db.r5.large
+      - db.r5.xlarge
+      - db.r5.2xlarge
+
+  DBMasterUsername:
+    Type: String
+    Description: Database master username
+    MinLength: 1
+    MaxLength: 16
+    Default: dbadmin
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Aurora cluster
+      SubnetIds: !Ref DatabaseSubnets
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Aurora cluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.0.0.0/16
+
+  DBClusterParameterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Description: Aurora PostgreSQL cluster parameter group
+      Family: aurora-postgresql13
+      Parameters:
+        timezone: UTC
+
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: Aurora PostgreSQL instance parameter group
+      Family: aurora-postgresql13
+
+  SecretManagerSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${EnvironmentName}-db-credentials
+      Description: Store Aurora database credentials
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "${DBMasterUsername}"}'
+        GenerateStringKey: password
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+
+  AuroraCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      EngineVersion: 13.7
+      DatabaseName: !Ref DBName
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${SecretManagerSecret}:SecretString:password}}'
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref DBSecurityGroup
+      DBClusterParameterGroupName: !Ref DBClusterParameterGroup
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: 03:00-04:00
+      PreferredMaintenanceWindow: Mon:04:00-Mon:05:00
+      StorageEncrypted: true
+      DeletionProtection: true
+      EnableHttpEndpoint: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  PrimaryInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBInstanceClass: !Ref DBInstanceClass
+      DBParameterGroupName: !Ref DBParameterGroup
+      PubliclyAccessible: false
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ReadReplica1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBInstanceClass: !Ref DBInstanceClass
+      DBParameterGroupName: !Ref DBParameterGroup
+      PubliclyAccessible: false
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  CloudWatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alert when database CPU exceeds 80%
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      ThresholdMetricId: e1
+      DatapointsToAlarm: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBClusterIdentifier
+          Value: !Ref AuroraCluster
+      AlarmActions:
+        - !Ref SNSTopic
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub ${EnvironmentName}-DB-Alerts
+
+Outputs:
+  ClusterEndpoint:
+    Description: Cluster endpoint
+    Value: !GetAtt AuroraCluster.Endpoint.Address
+    Export:
+      Name: !Sub ${AWS::StackName}-ClusterEndpoint
+
+  ReaderEndpoint:
+    Description: Reader endpoint
+    Value: !GetAtt AuroraCluster.ReadEndpoint.Address
+    Export:
+      Name: !Sub ${AWS::StackName}-ReaderEndpoint
+
+  SecretARN:
+    Description: Secret ARN for database credentials
+    Value: !Ref SecretManagerSecret
+    Export:
+      Name: !Sub ${AWS::StackName}-SecretARN
+
+  DatabaseName:
+    Description: Database name
+    Value: !Ref DBName
+    Export:
+      Name: !Sub ${AWS::StackName}-DatabaseName

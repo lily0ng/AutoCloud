@@ -1,0 +1,43 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ${CERT_NAME}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP_NAME}
+    environment: ${ENVIRONMENT}
+spec:
+  secretName: ${TLS_SECRET_NAME}
+  issuerRef:
+    name: ${ISSUER_NAME}
+    kind: ClusterIssuer
+  commonName: ${COMMON_NAME}
+  dnsNames:
+  - ${DOMAIN_NAME}
+  - www.${DOMAIN_NAME}
+  - api.${DOMAIN_NAME}
+  duration: 2160h
+  renewBefore: 360h
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  usages:
+  - digital signature
+  - key encipherment
+  - server auth
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: ${ADMIN_EMAIL}
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx

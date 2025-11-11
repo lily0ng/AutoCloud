@@ -1,0 +1,58 @@
+{
+  "name": "CloudStack Storage Template",
+  "description": "Template for managing storage volumes in CloudStack",
+  "version": "1.0",
+  "parameters": {
+    "volumeName": {
+      "type": "string",
+      "description": "Name of the volume",
+      "required": true
+    },
+    "diskOffering": {
+      "type": "string",
+      "description": "Disk offering ID",
+      "required": true
+    },
+    "zoneId": {
+      "type": "string",
+      "description": "Zone ID",
+      "required": true
+    },
+    "size": {
+      "type": "integer",
+      "description": "Volume size in GB",
+      "default": 100
+    },
+    "snapshotId": {
+      "type": "string",
+      "description": "Snapshot ID to create volume from",
+      "required": false
+    }
+  },
+  "resources": {
+    "volume": {
+      "type": "CloudStack::Storage::Volume",
+      "properties": {
+        "name": "${volumeName}",
+        "diskOfferingId": "${diskOffering}",
+        "zoneId": "${zoneId}",
+        "size": "${size}",
+        "snapshotId": "${snapshotId}"
+      }
+    }
+  },
+  "outputs": {
+    "volumeId": {
+      "value": "${volume.id}",
+      "description": "Volume ID"
+    },
+    "size": {
+      "value": "${volume.size}",
+      "description": "Volume size in GB"
+    },
+    "state": {
+      "value": "${volume.state}",
+      "description": "Volume state"
+    }
+  }
+}

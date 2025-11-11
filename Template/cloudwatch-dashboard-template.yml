@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudWatch Dashboard Template'
+
+Parameters:
+  DashboardName:
+    Type: String
+    Default: MyDashboard
+
+Resources:
+  CloudWatchDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Ref DashboardName
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AWS/EC2", "CPUUtilization"]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "EC2 CPU Utilization"
+              }
+            }
+          ]
+        }
+
+Outputs:
+  DashboardName:
+    Value: !Ref CloudWatchDashboard

@@ -1,0 +1,31 @@
+---
+# Pretix Ticketing Template
+version: '3.8'
+services:
+  pretix:
+    image: pretix/standalone:stable
+    restart: always
+    ports: ["80:80"]
+    environment:
+      PRETIX_DATABASE_BACKEND: postgresql
+      PRETIX_DATABASE_NAME: pretix
+      PRETIX_DATABASE_USER: pretix
+      PRETIX_DATABASE_PASSWORD: ${DB_PASSWORD:-pretixpass}
+      PRETIX_DATABASE_HOST: postgres
+      PRETIX_REDIS_LOCATION: redis://redis/0
+    volumes: [pretix_data:/data]
+    depends_on: [postgres, redis]
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: pretix
+      POSTGRES_USER: pretix
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pretixpass}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+  redis:
+    image: redis:7-alpine
+    restart: always
+volumes:
+  pretix_data:
+  postgres_data:

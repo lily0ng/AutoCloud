@@ -1,0 +1,27 @@
+{
+    "Parameters": {
+        "BucketName": "my-company-assets",
+        "EnvironmentName": "Production",
+        "EnableVersioning": "true",
+        "EnableEncryption": "true"
+    },
+    "LifecycleRules": {
+        "TransitionToIA": {
+            "Days": 90,
+            "StorageClass": "STANDARD_IA"
+        },
+        "TransitionToGlacier": {
+            "Days": 180,
+            "StorageClass": "GLACIER"
+        },
+        "Expiration": {
+            "Days": 365
+        }
+    },
+    "Tags": {
+        "Project": "DataStorage",
+        "Environment": "Production",
+        "Owner": "Data-Team",
+        "CostCenter": "IT-Storage"
+    }
+}

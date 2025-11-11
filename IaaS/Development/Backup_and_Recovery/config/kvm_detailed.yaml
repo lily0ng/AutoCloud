@@ -1,0 +1,133 @@
+platform: kvm
+hypervisor:
+  uri: "qemu:///system"
+  backup_storage_pool: "backup_pool"
+  temp_storage_pool: "temp_pool"
+
+virtual_machines:
+  production:
+    - name: "prod-app-vm1"
+      backup_type: "hot"  # Supports live backup
+      disks:
+        - path: "/var/lib/libvirt/images/prod-app-vm1.qcow2"
+          type: "qcow2"
+          size: 100  # GB
+          backup: true
+        - path: "/var/lib/libvirt/images/prod-app-vm1-data.qcow2"
+          type: "qcow2"
+          size: 500
+          backup: true
+      memory: 16  # GB
+      vcpus: 8
+      tags:
+        Environment: production
+        Role: application
+        BackupGroup: prod-critical
+
+    - name: "prod-db-vm1"
+      backup_type: "cold"  # Requires shutdown
+      disks:
+        - path: "/var/lib/libvirt/images/prod-db-vm1.qcow2"
+          type: "qcow2"
+          size: 100
+          backup: true
+        - path: "/var/lib/libvirt/images/prod-db-vm1-data.qcow2"
+          type: "qcow2"
+          size: 1000
+          backup: true
+      memory: 32
+      vcpus: 16
+      tags:
+        Environment: production
+        Role: database
+        BackupGroup: prod-critical
+
+backup_policies:
+  prod-critical:
+    retention:
+      daily: 7
+      weekly: 4
+      monthly: 3
+    schedule:
+      full: "0 0 * * 0"  # Weekly on Sunday
+      incremental: "0 0 * * 1-6"  # Daily except Sunday
+    snapshot_type: "external"  # external or internal
+    compression: true
+    compression_algorithm: "zstd"
+    
+  staging:
+    retention:
+      daily: 3
+      weekly: 2
+    schedule:
+      full: "0 0 * * 0"
+      incremental: "0 0 * * 1-6"
+    snapshot_type: "internal"
+    compression: true
+    compression_algorithm: "zstd"
+
+storage:
+  local:
+    path: "/var/lib/virt/backups"
+    min_free_space: 100  # GB
+  remote:
+    enabled: true
+    type: "nfs"
+    server: "${BACKUP_SERVER}"
+    path: "/volume1/backups/kvm"
+    mount_options: "vers=4,minorversion=1,sec=sys"
+
+encryption:
+  enabled: true
+  type: "luks"
+  key_file: "/etc/kvm/backup-keys/luks-key"
+  algorithm: "aes-xts-plain64"
+  key_size: 512
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    metrics:
+      - backup_size
+      - backup_duration
+      - backup_status
+      - storage_usage
+    pushgateway: "http://prometheus-pushgateway:9091"
+  
+  alerts:
+    backup_failed:
+      threshold: 1
+      duration: "5m"
+    storage_low:
+      threshold: 90  # percentage
+      duration: "1h"
+
+notification:
+  email:
+    enabled: true
+    smtp_server: "${SMTP_SERVER}"
+    smtp_port: 587
+    smtp_user: "${SMTP_USER}"
+    smtp_password: "${SMTP_PASSWORD}"
+    from_address: "${ALERT_EMAIL}"
+    recipients:
+      - "${ADMIN_EMAIL}"
+      - "${OPS_EMAIL}"
+  
+  slack:
+    enabled: true
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channel: "#vm-backups"
+
+recovery:
+  verification:
+    enabled: true
+    test_boot: true
+    timeout: 300  # seconds
+  
+  automated_testing:
+    enabled: true
+    schedule: "0 3 * * 1"  # Every Monday at 3 AM
+    test_vm: "backup-test-vm"
+    test_network: "isolated-test-net"

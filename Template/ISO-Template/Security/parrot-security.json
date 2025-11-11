@@ -1,0 +1,23 @@
+{
+  "name": "Parrot Security OS",
+  "version": "5.3",
+  "type": "security",
+  "distribution": "parrot",
+  "architecture": "amd64",
+  "iso_url": "https://download.parrot.sh/parrot/iso/5.3/Parrot-security-5.3_amd64.iso",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "20",
+    "min_cpu": "2"
+  },
+  "installation": {
+    "locale": "en_US.UTF-8",
+    "keyboard": "us",
+    "hostname": "parrot",
+    "username": "parrot",
+    "password": "toor",
+    "partitioning": "guided-entire",
+    "packages": ["parrot-tools-full"]
+  }
+}

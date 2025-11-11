@@ -1,0 +1,46 @@
+serviceMesh:
+  istio:
+    enabled: true
+    version: 1.12.0
+    mtls:
+      enabled: true
+      mode: STRICT
+    
+    gateways:
+      - name: public-gateway
+        selector:
+          istio: ingressgateway
+        servers:
+          - port: 80
+            protocol: HTTP
+          - port: 443
+            protocol: HTTPS
+            tls:
+              mode: SIMPLE
+              serverCertificate: /etc/certs/tls.crt
+              privateKey: /etc/certs/tls.key
+
+    virtualServices:
+      - name: api-routes
+        hosts:
+          - api.example.com
+        gateways:
+          - public-gateway
+        http:
+          - route:
+            - destination:
+                host: api-service
+                subset: v1
+                port:
+                  number: 8080
+            retries:
+              attempts: 3
+              perTryTimeout: 2s
+
+    circuitBreaker:
+      enabled: true
+      maxConnections: 100
+      httpMaxPendingRequests: 10
+      httpMaxRequests: 50
+      sleepWindow: 30s
+      consecutiveErrors: 5

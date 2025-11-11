@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudWatch Alarm Template'
+
+Parameters:
+  AlarmName:
+    Type: String
+    Default: MyCloudWatchAlarm
+  MetricName:
+    Type: String
+    Default: CPUUtilization
+  Namespace:
+    Type: String
+    Default: AWS/EC2
+  Threshold:
+    Type: Number
+    Default: 80
+
+Resources:
+  CloudWatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Ref AlarmName
+      AlarmDescription: Alarm when metric exceeds threshold
+      MetricName: !Ref MetricName
+      Namespace: !Ref Namespace
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref Threshold
+      ComparisonOperator: GreaterThanThreshold
+
+Outputs:
+  AlarmArn:
+    Value: !GetAtt CloudWatchAlarm.Arn

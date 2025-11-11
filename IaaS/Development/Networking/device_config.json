@@ -1,0 +1,44 @@
+{
+    "switches": [
+        {
+            "device_type": "cisco_ios",
+            "hostname": "switch1",
+            "ip": "192.168.1.10",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_password"
+        },
+        {
+            "device_type": "cisco_ios",
+            "hostname": "switch2",
+            "ip": "192.168.1.11",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_password"
+        },
+        {
+            "device_type": "cisco_ios",
+            "hostname": "switch3",
+            "ip": "192.168.1.12",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_password"
+        },
+        {
+            "device_type": "cisco_ios",
+            "hostname": "switch4",
+            "ip": "192.168.1.13",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_password"
+        },
+        {
+            "device_type": "cisco_ios",
+            "hostname": "switch5",
+            "ip": "192.168.1.14",
+            "username": "admin",
+            "password": "your_password",
+            "secret": "your_enable_password"
+        }
+    ]
+}

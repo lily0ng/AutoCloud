@@ -1,0 +1,58 @@
+monitoring:
+  # Monitoring configuration for Google Cloud Operations Suite
+  metrics:
+    collection_interval: 60s
+    exporters:
+      stackdriver:
+        project_id: ${PROJECT_ID}
+        metric_prefix: custom.googleapis.com/system
+    
+    collectors:
+      cpu:
+        enabled: true
+        include:
+          - cpu.utilization
+          - cpu.load_1m
+          - cpu.load_5m
+      
+      memory:
+        enabled: true
+        include:
+          - memory.usage
+          - memory.available
+      
+      disk:
+        enabled: true
+        include:
+          - disk.usage
+          - disk.operations
+          
+  logging:
+    exporters:
+      stackdriver:
+        project_id: ${PROJECT_ID}
+        log_name: application-logs
+        resource_type: gce_instance
+    
+    collectors:
+      syslog:
+        enabled: true
+        include_paths:
+          - /var/log/syslog
+          - /var/log/messages
+      
+      application:
+        enabled: true
+        include_paths:
+          - /var/log/application/*.log
+        
+  alerts:
+    cpu_utilization:
+      condition: metric.type="compute.googleapis.com/instance/cpu/utilization" AND metric.labels.instance_name="${INSTANCE_NAME}"
+      threshold: 0.8
+      duration: 300s
+      
+    memory_usage:
+      condition: metric.type="compute.googleapis.com/instance/memory/usage" AND metric.labels.instance_name="${INSTANCE_NAME}"
+      threshold: 0.9
+      duration: 300s

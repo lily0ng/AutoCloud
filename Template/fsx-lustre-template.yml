@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon FSx for Lustre Template'
+
+Parameters:
+  FileSystemName:
+    Type: String
+    Default: MyFSxLustre
+
+  StorageCapacity:
+    Type: Number
+    Default: 1200
+    Description: Storage capacity in GB (1200, 2400, or increments of 2400)
+
+  DeploymentType:
+    Type: String
+    Default: SCRATCH_2
+    AllowedValues:
+      - SCRATCH_1
+      - SCRATCH_2
+      - PERSISTENT_1
+      - PERSISTENT_2
+
+  PerUnitStorageThroughput:
+    Type: Number
+    Default: 200
+    AllowedValues: [50, 100, 200]
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+
+Resources:
+  FSxLustreFileSystem:
+    Type: AWS::FSx::FileSystem
+    Properties:
+      FileSystemType: LUSTRE
+      StorageCapacity: !Ref StorageCapacity
+      SubnetIds:
+        - !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      LustreConfiguration:
+        DeploymentType: !Ref DeploymentType
+        PerUnitStorageThroughput: !If [IsPersistent, !Ref PerUnitStorageThroughput, !Ref AWS::NoValue]
+        AutoImportPolicy: NEW_CHANGED
+        DataCompressionType: LZ4
+      Tags:
+        - Key: Name
+          Value: !Ref FileSystemName
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for FSx Lustre
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 988
+          ToPort: 988
+          CidrIp: 0.0.0.0/0
+
+Conditions:
+  IsPersistent: !Or
+    - !Equals [!Ref DeploymentType, PERSISTENT_1]
+    - !Equals [!Ref DeploymentType, PERSISTENT_2]
+
+Outputs:
+  FileSystemId:
+    Value: !Ref FSxLustreFileSystem
+  DNSName:
+    Value: !GetAtt FSxLustreFileSystem.DNSName
+  MountName:
+    Value: !GetAtt FSxLustreFileSystem.LustreMountName

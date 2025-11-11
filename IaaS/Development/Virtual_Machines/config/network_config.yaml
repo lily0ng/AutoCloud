@@ -1,0 +1,66 @@
+# Network Configuration
+
+# Network Topology
+network_topology:
+  type: "private_network"
+  subnet: "192.168.1.0/24"
+  gateway: "192.168.1.1"
+  dns:
+    - "8.8.8.8"
+    - "8.8.4.4"
+
+# VLAN Configuration
+vlans:
+  web_tier:
+    id: 10
+    subnet: "192.168.10.0/24"
+    description: "Web Server Network"
+  
+  db_tier:
+    id: 20
+    subnet: "192.168.20.0/24"
+    description: "Database Server Network"
+
+  cache_tier:
+    id: 30
+    subnet: "192.168.30.0/24"
+    description: "Cache Server Network"
+
+# Security Groups
+security_groups:
+  web:
+    inbound:
+      - port: 80
+        source: "0.0.0.0/0"
+      - port: 443
+        source: "0.0.0.0/0"
+      - port: 22
+        source: "192.168.1.0/24"
+  
+  database:
+    inbound:
+      - port: 3306
+        source: "192.168.10.0/24"
+      - port: 22
+        source: "192.168.1.0/24"
+
+  cache:
+    inbound:
+      - port: 6379
+        source: "192.168.10.0/24"
+      - port: 22
+        source: "192.168.1.0/24"
+
+# Load Balancer Configuration
+load_balancer:
+  enabled: true
+  type: "application"
+  algorithm: "round_robin"
+  health_check:
+    protocol: "http"
+    port: 80
+    path: "/health"
+    interval: 30
+    timeout: 5
+    healthy_threshold: 2
+    unhealthy_threshold: 3

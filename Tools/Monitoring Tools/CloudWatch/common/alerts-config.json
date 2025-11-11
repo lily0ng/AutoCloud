@@ -1,0 +1,74 @@
+{
+  "alerts": {
+    "high_cpu_utilization": {
+      "description": "Alert when CPU utilization is high across any cloud provider",
+      "threshold": 80,
+      "period": 300,
+      "evaluation_periods": 2,
+      "comparison_operator": "GreaterThanThreshold",
+      "treat_missing_data": "missing",
+      "actions": ["SNS_TOPIC_ARN"]
+    },
+    "memory_usage": {
+      "description": "Alert when memory usage is high",
+      "threshold": 85,
+      "period": 300,
+      "evaluation_periods": 2,
+      "comparison_operator": "GreaterThanThreshold",
+      "treat_missing_data": "missing",
+      "actions": ["SNS_TOPIC_ARN"]
+    },
+    "disk_space": {
+      "description": "Alert when disk usage is high",
+      "threshold": 85,
+      "period": 300,
+      "evaluation_periods": 2,
+      "comparison_operator": "GreaterThanThreshold",
+      "treat_missing_data": "missing",
+      "actions": ["SNS_TOPIC_ARN"]
+    },
+    "error_rate": {
+      "description": "Alert when error rate is high",
+      "threshold": 5,
+      "period": 300,
+      "evaluation_periods": 2,
+      "comparison_operator": "GreaterThanThreshold",
+      "treat_missing_data": "missing",
+      "actions": ["SNS_TOPIC_ARN"]
+    }
+  },
+  "dashboards": {
+    "cross_cloud_overview": {
+      "widgets": [
+        {
+          "type": "metric",
+          "properties": {
+            "metrics": [
+              ["AWS/EC2", "CPUUtilization"],
+              ["Azure/Metrics", "Percentage CPU"],
+              ["GCP/Metrics", "compute.googleapis.com/instance/cpu/utilization"]
+            ],
+            "period": 300,
+            "stat": "Average",
+            "region": "us-west-2",
+            "title": "Cross-Cloud CPU Utilization"
+          }
+        },
+        {
+          "type": "metric",
+          "properties": {
+            "metrics": [
+              ["AWS/EC2", "MemoryUtilization"],
+              ["Azure/Metrics", "Available Memory Bytes"],
+              ["GCP/Metrics", "compute.googleapis.com/instance/memory/usage"]
+            ],
+            "period": 300,
+            "stat": "Average",
+            "region": "us-west-2",
+            "title": "Cross-Cloud Memory Usage"
+          }
+        }
+      ]
+    }
+  }
+}

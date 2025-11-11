@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ubuntu-config
+data:
+  DEBIAN_FRONTEND: "noninteractive"
+  TZ: "UTC"
+  LANG: "en_US.UTF-8"
+  # Add any additional environment variables here

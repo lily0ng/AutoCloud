@@ -1,0 +1,52 @@
+{
+  "name": "Alpine Linux 3.18",
+  "version": "3.18",
+  "type": "linux",
+  "distribution": "alpine",
+  "architecture": "x86_64",
+  "iso_url": "https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-virt-3.18.4-x86_64.iso",
+  "checksum": "sha256:checksum_here",
+  "boot_command": [
+    "<wait10>",
+    "root<enter><wait>",
+    "setup-alpine -q<enter><wait5>",
+    "us<enter><wait>",
+    "us<enter><wait>",
+    "alpine<enter><wait>",
+    "<enter><wait>",
+    "eth0<enter><wait>",
+    "dhcp<enter><wait>",
+    "n<enter><wait>",
+    "password<enter><wait>",
+    "password<enter><wait>",
+    "UTC<enter><wait>",
+    "none<enter><wait>",
+    "openssh<enter><wait>",
+    "sda<enter><wait>",
+    "sys<enter><wait>",
+    "y<enter><wait30>",
+    "reboot<enter>"
+  ],
+  "system_requirements": {
+    "min_ram": "256",
+    "min_disk": "1",
+    "min_cpu": "1"
+  },
+  "setup": {
+    "keyboard": "us us",
+    "hostname": "alpine",
+    "network": "eth0 dhcp",
+    "timezone": "UTC",
+    "proxy": "none",
+    "apk_mirror": "auto",
+    "ssh": "openssh",
+    "disk": "sda",
+    "mode": "sys",
+    "packages": [
+      "vim",
+      "curl",
+      "wget",
+      "bash"
+    ]
+  }
+}

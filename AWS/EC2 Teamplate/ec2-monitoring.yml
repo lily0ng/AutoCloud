@@ -1,0 +1,26 @@
+Resources:
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro"
+      ImageId: "ami-0abcd12345example"
+      KeyName: "my-key-pair"
+
+  CPUUtilizationAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "HighCPUUtilization"
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/EC2"
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+
+  AlarmNotificationTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      DisplayName: "EC2 Alarm Notifications"

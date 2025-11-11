@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Global Accelerator Template'
+
+Parameters:
+  AcceleratorName:
+    Type: String
+    Default: MyGlobalAccelerator
+
+Resources:
+  GlobalAccelerator:
+    Type: AWS::GlobalAccelerator::Accelerator
+    Properties:
+      Name: !Ref AcceleratorName
+      Enabled: true
+      IpAddressType: IPV4
+
+  Listener:
+    Type: AWS::GlobalAccelerator::Listener
+    Properties:
+      AcceleratorArn: !Ref GlobalAccelerator
+      Protocol: TCP
+      PortRanges:
+        - FromPort: 80
+          ToPort: 80
+
+  EndpointGroup:
+    Type: AWS::GlobalAccelerator::EndpointGroup
+    Properties:
+      ListenerArn: !Ref Listener
+      EndpointGroupRegion: !Ref AWS::Region
+      TrafficDialPercentage: 100
+      HealthCheckProtocol: TCP
+      HealthCheckPort: 80
+
+Outputs:
+  AcceleratorArn:
+    Value: !Ref GlobalAccelerator
+  AcceleratorDnsName:
+    Value: !GetAtt GlobalAccelerator.DnsName
+  AcceleratorIpAddresses:
+    Value: !Join [', ', !GetAtt GlobalAccelerator.IpSets]

@@ -1,0 +1,99 @@
+# User Management System Configuration
+
+system:
+  version: 1.0.0
+  environment: production
+  default_os: linux
+
+logging:
+  log_dir: /logs
+  log_level: INFO
+  retention_days: 90
+  formats:
+    system: '[%(asctime)s] %(levelname)s: %(message)s'
+    audit: '[%(asctime)s] USER=%(user)s ACTION=%(action)s STATUS=%(status)s'
+
+security:
+  password_policy:
+    min_length: 12
+    require_uppercase: true
+    require_lowercase: true
+    require_numbers: true
+    require_special: true
+    max_age_days: 90
+    history_count: 5
+  session:
+    timeout_minutes: 30
+    max_attempts: 5
+    lockout_duration_minutes: 30
+  mfa:
+    enabled: true
+    methods: [totp, sms]
+
+directories:
+  ldap:
+    enabled: true
+    server: ldap://ldap.example.com
+    base_dn: dc=example,dc=com
+    bind_dn: cn=admin,dc=example,dc=com
+    # bind_password should be stored securely
+  active_directory:
+    enabled: false
+    domain: example.com
+    server: dc.example.com
+
+email:
+  smtp_server: smtp.example.com
+  smtp_port: 587
+  use_tls: true
+  from_address: usermanagement@example.com
+  templates_dir: /config/templates/email
+
+onboarding:
+  default_groups: [users]
+  welcome_email: true
+  resource_provisioning:
+    create_home: true
+    email_setup: true
+    vpn_access: true
+
+offboarding:
+  backup_data: true
+  backup_retention_days: 30
+  revoke_access:
+    - vpn
+    - email
+    - systems
+    - applications
+
+roles:
+  admin:
+    permissions: [all]
+  manager:
+    permissions: [user_view, user_edit, report_view]
+  staff:
+    permissions: [user_view, self_edit]
+  guest:
+    permissions: [self_view]
+
+os_specific:
+  linux:
+    shell: /bin/bash
+    home_base: /home
+    groups: [sudo, users]
+  windows:
+    domain: EXAMPLE
+    profile_path: C:\Users
+    default_groups: [Users]
+  macos:
+    shell: /bin/zsh
+    home: /Users
+    groups: [staff]
+  freebsd:
+    shell: /bin/csh
+    home: /home
+    groups: [wheel]
+  openbsd:
+    shell: /bin/ksh
+    home: /home
+    groups: [wheel]

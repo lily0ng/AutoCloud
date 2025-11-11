@@ -1,0 +1,43 @@
+logging:
+  elasticsearch:
+    enabled: true
+    replicas: 3
+    storage:
+      storageClass: standard
+      size: 100Gi
+      
+  kibana:
+    enabled: true
+    replicas: 2
+    
+  fluentd:
+    enabled: true
+    config:
+      sources:
+        - type: tail
+          format: json
+          path: /var/log/containers/*.log
+          pos_file: /var/log/fluentd-containers.log.pos
+          tag: kubernetes.*
+          
+  retention:
+    enabled: true
+    days: 30
+    indices:
+      - pattern: logstash-*
+        age: 7d
+      - pattern: metrics-*
+        age: 30d
+        
+  alerts:
+    - name: HighErrorRate
+      condition: count(level=error) > 100
+      period: 5m
+      channels:
+        - slack
+        - email
+    - name: ServiceDown
+      condition: status=down
+      period: 1m
+      channels:
+        - pagerduty

@@ -1,0 +1,78 @@
+{
+    "Parameters": {
+        "EnvironmentName": "Production",
+        "VpcId": {"Fn::ImportValue": "Production-VPCID"}
+    },
+    "SecurityGroups": {
+        "WebServerSG": {
+            "Description": "Security group for web servers",
+            "Ingress": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 80,
+                    "ToPort": 80,
+                    "CidrIp": "0.0.0.0/0",
+                    "Description": "Allow HTTP"
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 443,
+                    "ToPort": 443,
+                    "CidrIp": "0.0.0.0/0",
+                    "Description": "Allow HTTPS"
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "CidrIp": "10.0.0.0/16",
+                    "Description": "Allow SSH from VPC"
+                }
+            ]
+        },
+        "DatabaseSG": {
+            "Description": "Security group for databases",
+            "Ingress": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 3306,
+                    "ToPort": 3306,
+                    "SourceSecurityGroupId": "WebServerSG",
+                    "Description": "Allow MySQL from web servers"
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 5432,
+                    "ToPort": 5432,
+                    "SourceSecurityGroupId": "WebServerSG",
+                    "Description": "Allow PostgreSQL from web servers"
+                }
+            ]
+        },
+        "LoadBalancerSG": {
+            "Description": "Security group for load balancers",
+            "Ingress": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 80,
+                    "ToPort": 80,
+                    "CidrIp": "0.0.0.0/0",
+                    "Description": "Allow HTTP"
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 443,
+                    "ToPort": 443,
+                    "CidrIp": "0.0.0.0/0",
+                    "Description": "Allow HTTPS"
+                }
+            ]
+        }
+    },
+    "Tags": {
+        "Project": "SecurityInfra",
+        "Environment": "Production",
+        "Owner": "Security-Team",
+        "CostCenter": "IT-Security"
+    }
+}

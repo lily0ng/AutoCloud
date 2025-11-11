@@ -1,0 +1,70 @@
+{
+  "name": "openSUSE Leap 15.5",
+  "version": "15.5",
+  "type": "linux",
+  "distribution": "opensuse",
+  "architecture": "x86_64",
+  "iso_url": "https://download.opensuse.org/distribution/leap/15.5/iso/openSUSE-Leap-15.5-DVD-x86_64.iso",
+  "checksum": "sha256:checksum_here",
+  "boot_command": [
+    "<esc><enter><wait>",
+    "linux netsetup=dhcp install=cd:/ lang=en_US autoyast=http://{{ .HTTPIP }}:{{ .HTTPPort }}/autoyast.xml<enter><wait>"
+  ],
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "20",
+    "min_cpu": "2"
+  },
+  "autoyast": {
+    "general": {
+      "mode": {
+        "confirm": false
+      },
+      "signature-handling": {
+        "accept_unsigned_file": true,
+        "accept_unknown_gpg_key": true
+      }
+    },
+    "networking": {
+      "keep_install_network": true,
+      "interfaces": [{
+        "device": "eth0",
+        "bootproto": "dhcp",
+        "startmode": "auto"
+      }]
+    },
+    "partitioning": [{
+      "device": "/dev/sda",
+      "use": "all",
+      "partitions": [{
+        "mount": "/",
+        "size": "max",
+        "filesystem": "btrfs"
+      }]
+    }],
+    "software": {
+      "packages": [
+        "openssh",
+        "vim",
+        "wget",
+        "curl"
+      ],
+      "patterns": [
+        "base",
+        "minimal_base"
+      ]
+    },
+    "users": [{
+      "username": "opensuse",
+      "user_password": "encrypted",
+      "encrypted": true,
+      "fullname": "openSUSE User"
+    }],
+    "services-manager": {
+      "default_target": "multi-user",
+      "services": {
+        "enable": ["sshd"]
+      }
+    }
+  }
+}

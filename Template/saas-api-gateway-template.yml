@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+data:
+  gateway.conf: |
+    server {
+      listen 80;
+      server_name api.example.com;
+      
+      # Rate limiting
+      limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/s;
+      limit_req zone=api_limit burst=20 nodelay;
+      
+      # Authentication endpoint
+      location /api/auth {
+        proxy_pass http://auth-service:8080;
+        proxy_set_header X-Tenant-ID $http_x_tenant_id;
+      }
+      
+      # User service
+      location /api/users {
+        auth_request /auth/verify;
+        proxy_pass http://user-service:8080;
+        proxy_set_header X-Tenant-ID $http_x_tenant_id;
+      }
+      
+      # Subscription service
+      location /api/subscriptions {
+        auth_request /auth/verify;
+        proxy_pass http://subscription-service:8080;
+        proxy_set_header X-Tenant-ID $http_x_tenant_id;
+      }
+      
+      # Billing service
+      location /api/billing {
+        auth_request /auth/verify;
+        proxy_pass http://billing-service:8080;
+        proxy_set_header X-Tenant-ID $http_x_tenant_id;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx/conf.d
+      volumes:
+      - name: config
+        configMap:
+          name: api-gateway-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: api-gateway
+  ports:
+  - port: 80
+    targetPort: 80

@@ -1,0 +1,148 @@
+---
+# File System Backup Template
+# Comprehensive filesystem backup configuration
+
+apiVersion: backup.autocloud.io/v1
+kind: FilesystemBackup
+metadata:
+  name: filesystem-backup
+  namespace: backup-system
+  labels:
+    app: filesystem-backup
+    backup-type: filesystem
+    environment: production
+
+spec:
+  # Filesystem Sources
+  sources:
+    - name: application-data
+      paths:
+        - /var/app/data
+        - /var/app/uploads
+        - /var/app/config
+      exclude:
+        patterns:
+          - "*.tmp"
+          - "*.cache"
+          - "*.log"
+          - ".git/*"
+        directories:
+          - /var/app/data/temp
+          - /var/app/data/cache
+      preservePermissions: true
+      preserveOwnership: true
+      preserveTimestamps: true
+      preserveACLs: true
+      preserveXattrs: true
+      
+    - name: user-data
+      paths:
+        - /home
+      exclude:
+        patterns:
+          - ".cache/*"
+          - "*.swp"
+          - "node_modules/*"
+      
+    - name: system-config
+      paths:
+        - /etc
+        - /root
+      preservePermissions: true
+
+  # Backup Schedule
+  schedule:
+    full:
+      cron: "0 1 * * 0"  # Weekly
+    incremental:
+      cron: "0 2 * * 1-6"  # Daily
+    differential:
+      cron: "0 3 * * 3"  # Wednesday
+
+  # Destination
+  destination:
+    type: s3
+    bucket: filesystem-backups
+    region: us-east-1
+    prefix: "fs-backup/${HOSTNAME}/${DATE}/"
+    storageClass: INTELLIGENT_TIERING
+
+  # Backup Options
+  options:
+    # Snapshot support
+    snapshot:
+      enabled: true
+      provider: lvm  # lvm, zfs, btrfs
+      snapshotSize: 10G
+      
+    # Compression
+    compression:
+      enabled: true
+      algorithm: zstd
+      level: 3
+      
+    # Encryption
+    encryption:
+      enabled: true
+      algorithm: AES-256-GCM
+      
+    # Deduplication
+    deduplication:
+      enabled: true
+      blockSize: 64KB
+      
+    # Sparse file handling
+    sparseFiles:
+      enabled: true
+      detectHoles: true
+      
+    # Hard link preservation
+    hardlinks:
+      enabled: true
+      
+    # Extended attributes
+    extendedAttributes:
+      enabled: true
+      includeACLs: true
+      includeSELinux: true
+
+  # Change Detection
+  changeDetection:
+    method: timestamp  # timestamp, checksum, inotify
+    indexing:
+      enabled: true
+      database: /var/backup/index.db
+
+  # Retention Policy
+  retention:
+    full:
+      weekly: 4
+      monthly: 12
+    incremental:
+      daily: 7
+    differential:
+      weekly: 2
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    metrics:
+      - files_backed_up
+      - bytes_transferred
+      - backup_duration_seconds
+      - changed_files_count
+    alerts:
+      - name: backup-failed
+        severity: critical
+      - name: large-file-change
+        threshold: 1GB
+        severity: info
+
+  # Recovery
+  recovery:
+    quickRestore: true
+    selectiveRestore: true
+    pointInTime: true
+    testing:
+      enabled: true
+      schedule: "0 6 * * 0"

@@ -1,0 +1,45 @@
+---
+# Rocky OS 9 Storage Configuration
+include: base_storage_config.yaml
+
+storage_config:
+  package_dependencies:
+    - lvm2
+    - xfsprogs
+    - btrfs-progs
+    - stratisd
+    - stratis-cli
+    
+  filesystem_defaults:
+    type: "xfs"
+    options:
+      - "defaults"
+      - "noatime"
+      - "prjquota"
+      
+  stratis_pools:
+    enabled: true
+    pool_name: "stratis_pool"
+    physical_devices:
+      - "/dev/sdb"
+    filesystems:
+      data:
+        size: "dynamic"
+        mount_point: "/data"
+        
+  system_encryption:
+    type: "luks2"
+    options:
+      cipher: "aes-xts-plain64"
+      key_size: 512
+      pbkdf: "argon2id"
+      
+  performance:
+    io_scheduler: "bfq"
+    readahead: "2048"
+    disk_monitoring: true
+    
+  quotas:
+    enabled: true
+    default_user_quota: "50G"
+    default_group_quota: "100G"

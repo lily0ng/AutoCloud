@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: authentik-postgres
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: authentik123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - authentik-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: authentik-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - authentik-net
+
+  server:
+    image: ghcr.io/goauthentik/server:2023.10.4
+    container_name: authentik-server
+    command: server
+    environment:
+      AUTHENTIK_SECRET_KEY: your-secret-key
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik123
+      AUTHENTIK_REDIS__HOST: redis
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - authentik_media:/media
+      - authentik_templates:/templates
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - authentik-net
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/goauthentik/server:2023.10.4
+    container_name: authentik-worker
+    command: worker
+    environment:
+      AUTHENTIK_SECRET_KEY: your-secret-key
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik123
+      AUTHENTIK_REDIS__HOST: redis
+    volumes:
+      - authentik_media:/media
+      - authentik_templates:/templates
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - authentik-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  authentik_media:
+  authentik_templates:
+
+networks:
+  authentik-net:
+    driver: bridge

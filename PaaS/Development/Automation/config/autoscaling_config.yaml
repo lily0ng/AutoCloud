@@ -1,0 +1,48 @@
+autoscaling:
+  policies:
+    default:
+      min_instances: 2
+      max_instances: 10
+      desired_capacity: 3
+      cooldown_period: 300
+      
+    scaling_triggers:
+      cpu_utilization:
+        target: 70
+        scale_out_threshold: 80
+        scale_in_threshold: 30
+        evaluation_periods: 3
+        
+      memory_utilization:
+        target: 75
+        scale_out_threshold: 85
+        scale_in_threshold: 40
+        evaluation_periods: 3
+        
+      request_count:
+        target: 1000
+        scale_out_threshold: 1200
+        scale_in_threshold: 500
+        evaluation_periods: 2
+        
+  instance_types:
+    web:
+      preferred: ["t3.medium", "t3.large"]
+      fallback: ["t2.medium", "t2.large"]
+    
+    worker:
+      preferred: ["c5.large", "c5.xlarge"]
+      fallback: ["c4.large", "c4.xlarge"]
+      
+  schedules:
+    business_hours:
+      min_size: 4
+      max_size: 12
+      desired_capacity: 6
+      recurrence: "0 9 * * MON-FRI"
+      
+    off_hours:
+      min_size: 2
+      max_size: 6
+      desired_capacity: 3
+      recurrence: "0 18 * * MON-FRI"

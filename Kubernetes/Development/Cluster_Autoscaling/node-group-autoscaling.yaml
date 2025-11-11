@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-autoscaler-priority-expander
+  namespace: kube-system
+data:
+  priorities: |-
+    10:
+      - .*-high-priority-.*
+    50:
+      - .*-medium-priority-.*
+    100:
+      - .*-low-priority-.*
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-autoscaler-status
+  namespace: kube-system
+data:
+  status: |
+    Cluster-autoscaler status at 2024-12-30 09:01:31:
+    Cluster-wide:
+      Health: Healthy
+      ScaleUp: InProgress
+      ScaleDown: NoActivity
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: ScalingPolicy
+metadata:
+  name: node-group-scaling
+spec:
+  scaleUp:
+    policies:
+    - type: Pods
+      value: 4
+      periodSeconds: 60
+    selectPolicy: Max
+    stabilizationWindowSeconds: 0
+  scaleDown:
+    policies:
+    - type: Pods
+      value: 2
+      periodSeconds: 60
+    selectPolicy: Min
+    stabilizationWindowSeconds: 300

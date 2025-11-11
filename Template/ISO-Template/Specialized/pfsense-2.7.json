@@ -1,0 +1,30 @@
+{
+  "name": "pfSense 2.7",
+  "version": "2.7.2",
+  "type": "firewall",
+  "distribution": "pfsense",
+  "architecture": "amd64",
+  "iso_url": "https://atxfiles.netgate.com/mirror/downloads/pfSense-CE-2.7.2-RELEASE-amd64.iso.gz",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "1024",
+    "min_disk": "8",
+    "min_cpu": "1",
+    "network_interfaces": 2
+  },
+  "installation": {
+    "console": "vt100",
+    "keymap": "us.kbd",
+    "partitioning": "auto-ufs",
+    "disk": "da0"
+  },
+  "initial_config": {
+    "wan_interface": "em0",
+    "lan_interface": "em1",
+    "lan_ip": "192.168.1.1",
+    "lan_subnet": "24",
+    "admin_password": "pfsense",
+    "hostname": "pfsense",
+    "domain": "localdomain"
+  }
+}

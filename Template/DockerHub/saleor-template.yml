@@ -1,0 +1,33 @@
+---
+# Saleor E-commerce Template
+version: '3.8'
+services:
+  api:
+    image: ghcr.io/saleor/saleor:latest
+    restart: always
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: postgres://saleor:${DB_PASSWORD:-saleorpass}@postgres:5432/saleor
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-changeme}
+      ALLOWED_HOSTS: localhost,127.0.0.1
+    depends_on: [postgres, redis]
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: saleor
+      POSTGRES_USER: saleor
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-saleorpass}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes: [redis_data:/data]
+  dashboard:
+    image: ghcr.io/saleor/saleor-dashboard:latest
+    restart: always
+    ports: ["9000:80"]
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,53 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+  max_connections: 1000
+
+database:
+  host: localhost
+  port: 5432
+  user: admin
+  password: ${DB_PASSWORD}
+  dbname: appdb
+  max_connections: 25
+  connection_timeout: 10s
+
+redis:
+  host: localhost
+  port: 6379
+  password: ${REDIS_PASSWORD}
+  db: 0
+  max_retries: 3
+  pool_size: 10
+
+kafka:
+  brokers:
+    - localhost:9092
+  topic: events
+  group_id: autocloud-consumer
+  auto_offset_reset: earliest
+
+security:
+  jwt_secret: ${JWT_SECRET}
+  token_duration: 24h
+  bcrypt_cost: 12
+  rate_limit:
+    requests_per_minute: 100
+    burst: 50
+
+monitoring:
+  metrics_port: 9090
+  health_check_interval: 30s
+  log_level: info
+  
+logging:
+  format: json
+  output: stdout
+  level: info
+  
+features:
+  enable_tracing: true
+  enable_metrics: true
+  enable_profiling: false

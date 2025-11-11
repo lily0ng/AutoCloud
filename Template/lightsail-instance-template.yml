@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Lightsail Instance Template'
+
+Parameters:
+  InstanceName:
+    Type: String
+    Default: MyLightsailInstance
+
+  BlueprintId:
+    Type: String
+    Default: amazon_linux_2023
+    Description: Lightsail blueprint ID
+
+  BundleId:
+    Type: String
+    Default: nano_2_0
+    Description: Lightsail bundle ID (instance size)
+
+  AvailabilityZone:
+    Type: String
+    Default: us-east-1a
+
+Resources:
+  LightsailInstance:
+    Type: AWS::Lightsail::Instance
+    Properties:
+      InstanceName: !Ref InstanceName
+      BlueprintId: !Ref BlueprintId
+      BundleId: !Ref BundleId
+      AvailabilityZone: !Ref AvailabilityZone
+      UserData: |
+        #!/bin/bash
+        yum update -y
+        echo "Lightsail instance initialized" > /var/log/init.log
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+
+  StaticIP:
+    Type: AWS::Lightsail::StaticIp
+    Properties:
+      StaticIpName: !Sub '${InstanceName}-StaticIP'
+      AttachedTo: !Ref LightsailInstance
+
+Outputs:
+  InstanceArn:
+    Value: !GetAtt LightsailInstance.InstanceArn
+  StaticIPAddress:
+    Value: !GetAtt StaticIP.IpAddress

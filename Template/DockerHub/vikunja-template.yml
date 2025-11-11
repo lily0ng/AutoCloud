@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: vikunja-postgres
+    environment:
+      POSTGRES_DB: vikunja
+      POSTGRES_USER: vikunja
+      POSTGRES_PASSWORD: vikunja123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vikunja-net
+
+  vikunja:
+    image: vikunja/vikunja:latest
+    container_name: vikunja
+    ports:
+      - "3456:3456"
+    environment:
+      VIKUNJA_DATABASE_TYPE: postgres
+      VIKUNJA_DATABASE_HOST: postgres
+      VIKUNJA_DATABASE_USER: vikunja
+      VIKUNJA_DATABASE_PASSWORD: vikunja123
+      VIKUNJA_DATABASE_DATABASE: vikunja
+      VIKUNJA_SERVICE_JWTSECRET: your-jwt-secret
+    volumes:
+      - vikunja_files:/app/vikunja/files
+    depends_on:
+      - postgres
+    networks:
+      - vikunja-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  vikunja_files:
+
+networks:
+  vikunja-net:
+    driver: bridge

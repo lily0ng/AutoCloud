@@ -1,0 +1,180 @@
+---
+# Configuration Management Template - Ansible
+# Application deployment and configuration
+
+- name: Deploy Application
+  hosts: webservers
+  become: yes
+  vars:
+    app_name: myapp
+    app_version: "1.0.0"
+    app_port: 8080
+    environment: production
+  
+  tasks:
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+    
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - python3-pip
+          - git
+        state: present
+    
+    - name: Install Docker SDK for Python
+      pip:
+        name: docker
+        state: present
+    
+    - name: Create application directory
+      file:
+        path: "/opt/{{ app_name }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Copy application configuration
+      template:
+        src: templates/app-config.j2
+        dest: "/opt/{{ app_name }}/config.yml"
+        mode: '0644'
+      notify: restart application
+    
+    - name: Copy Docker Compose file
+      template:
+        src: templates/docker-compose.j2
+        dest: "/opt/{{ app_name }}/docker-compose.yml"
+        mode: '0644'
+    
+    - name: Pull Docker images
+      docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop:
+        - "{{ app_name }}:{{ app_version }}"
+        - "postgres:15"
+        - "redis:7-alpine"
+    
+    - name: Start application services
+      docker_compose:
+        project_src: "/opt/{{ app_name }}"
+        state: present
+        pull: yes
+      register: output
+    
+    - name: Wait for application to be ready
+      uri:
+        url: "http://localhost:{{ app_port }}/health"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
+    
+    - name: Configure firewall
+      ufw:
+        rule: allow
+        port: "{{ app_port }}"
+        proto: tcp
+    
+    - name: Setup log rotation
+      copy:
+        dest: "/etc/logrotate.d/{{ app_name }}"
+        content: |
+          /var/log/{{ app_name }}/*.log {
+            daily
+            rotate 14
+            compress
+            delaycompress
+            notifempty
+            create 0640 root root
+            sharedscripts
+            postrotate
+              systemctl reload {{ app_name }} > /dev/null 2>&1 || true
+            endscript
+          }
+    
+    - name: Setup monitoring agent
+      include_role:
+        name: prometheus-node-exporter
+    
+    - name: Configure backup cron job
+      cron:
+        name: "Backup {{ app_name }} data"
+        minute: "0"
+        hour: "2"
+        job: "/opt/{{ app_name }}/scripts/backup.sh"
+        user: root
+  
+  handlers:
+    - name: restart application
+      docker_compose:
+        project_src: "/opt/{{ app_name }}"
+        restarted: yes
+
+---
+# Database Configuration Playbook
+- name: Configure Database
+  hosts: dbservers
+  become: yes
+  vars:
+    db_name: appdb
+    db_user: appuser
+  
+  tasks:
+    - name: Install PostgreSQL
+      apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+          - python3-psycopg2
+        state: present
+    
+    - name: Start PostgreSQL service
+      systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+    
+    - name: Create database
+      postgresql_db:
+        name: "{{ db_name }}"
+        state: present
+      become_user: postgres
+    
+    - name: Create database user
+      postgresql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        db: "{{ db_name }}"
+        priv: ALL
+        state: present
+      become_user: postgres
+    
+    - name: Configure PostgreSQL for remote connections
+      lineinfile:
+        path: /etc/postgresql/15/main/postgresql.conf
+        regexp: "^#?listen_addresses"
+        line: "listen_addresses = '*'"
+      notify: restart postgresql
+    
+    - name: Configure pg_hba for application access
+      postgresql_pg_hba:
+        dest: /etc/postgresql/15/main/pg_hba.conf
+        contype: host
+        databases: "{{ db_name }}"
+        users: "{{ db_user }}"
+        source: 10.0.0.0/8
+        method: md5
+      notify: restart postgresql
+  
+  handlers:
+    - name: restart postgresql
+      systemd:
+        name: postgresql
+        state: restarted

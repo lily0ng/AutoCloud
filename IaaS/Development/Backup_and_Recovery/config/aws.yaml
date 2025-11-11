@@ -1,0 +1,48 @@
+platform: aws
+backup:
+  instances:
+    - id: "${AWS_INSTANCE_ID}"
+      volumes:
+        - "/dev/xvda1"
+        - "/dev/xvdf"
+      tags:
+        Environment: production
+  
+  snapshot:
+    enabled: true
+    copy_to_region: "${DR_REGION}"
+    
+retention:
+  snapshots:
+    daily: 7
+    weekly: 4
+    monthly: 3
+
+encryption:
+  enabled: true
+  kms_key_id: "${AWS_KMS_KEY_ID}"
+
+monitoring:
+  enabled: true
+  cloudwatch:
+    metrics_namespace: "Backup/Production"
+    alarm:
+      enabled: true
+      sns_topic: "${SNS_TOPIC_ARN}"
+
+tags:
+  Project: production
+  BackupType: automated
+  Owner: infrastructure
+
+schedule:
+  full_backup: "0 0 * * 0"  # Weekly on Sunday
+  incremental: "0 0 * * 1-6"  # Daily except Sunday
+
+notification:
+  enabled: true
+  sns_topic: "${SNS_TOPIC_ARN}"
+  events:
+    - backup_start
+    - backup_complete
+    - backup_error

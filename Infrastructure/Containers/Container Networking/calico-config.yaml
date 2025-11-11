@@ -1,0 +1,20 @@
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: default-ipv4-pool
+spec:
+  cidr: 192.168.0.0/16
+  ipipMode: Always
+  natOutgoing: true
+  nodeSelector: all()
+  vxlanMode: Never
+
+---
+apiVersion: projectcalico.org/v3
+kind: BGPConfiguration
+metadata:
+  name: default
+spec:
+  logSeverityScreen: Info
+  nodeToNodeMeshEnabled: true
+  asNumber: 63400

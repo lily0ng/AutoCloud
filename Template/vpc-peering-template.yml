@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'VPC Peering Connection Template'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PeerVpcId:
+    Type: String
+  PeerRegion:
+    Type: String
+    Default: us-east-1
+
+Resources:
+  VPCPeeringConnection:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !Ref VpcId
+      PeerVpcId: !Ref PeerVpcId
+      PeerRegion: !Ref PeerRegion
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-Peering'
+
+Outputs:
+  PeeringConnectionId:
+    Value: !Ref VPCPeeringConnection

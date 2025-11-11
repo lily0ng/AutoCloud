@@ -1,0 +1,38 @@
+{
+  "name": "Fedora CoreOS",
+  "version": "stable",
+  "type": "container-os",
+  "distribution": "coreos",
+  "architecture": "x86_64",
+  "iso_url": "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/latest/x86_64/fedora-coreos-stable-live.x86_64.iso",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "8",
+    "min_cpu": "1"
+  },
+  "ignition_config": {
+    "version": "3.3.0",
+    "passwd": {
+      "users": [{
+        "name": "core",
+        "sshAuthorizedKeys": ["ssh-rsa AAAAB3..."]
+      }]
+    },
+    "storage": {
+      "files": [{
+        "path": "/etc/hostname",
+        "mode": 420,
+        "contents": {
+          "source": "data:,coreos"
+        }
+      }]
+    },
+    "systemd": {
+      "units": [{
+        "name": "docker.service",
+        "enabled": true
+      }]
+    }
+  }
+}

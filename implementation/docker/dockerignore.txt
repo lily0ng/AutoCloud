@@ -1,0 +1,19 @@
+# Docker ignore patterns
+.git
+.gitignore
+*.md
+README.md
+docs/
+tests/
+.env
+.vscode
+.idea
+*.log
+build/
+dist/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+coverage/
+.DS_Store

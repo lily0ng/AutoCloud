@@ -1,0 +1,61 @@
+name: Docker CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Security Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'your-image:${{ github.sha }}'
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+        
+    - name: Build and Push
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          your-username/your-image:latest
+          your-username/your-image:${{ github.sha }}
+        cache-from: type=registry,ref=your-username/your-image:buildcache
+        cache-to: type=registry,ref=your-username/your-image:buildcache,mode=max
+        
+    - name: Run Tests
+      run: docker run your-username/your-image:${{ github.sha }} npm test
+      
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Deploy to Production
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.DEPLOY_HOST }}
+        username: ${{ secrets.DEPLOY_USER }}
+        key: ${{ secrets.DEPLOY_KEY }}
+        script: |
+          docker pull your-username/your-image:${{ github.sha }}
+          docker-compose up -d

@@ -1,0 +1,37 @@
+storage:
+  volumes:
+    types:
+      - name: gp3
+        iops: 3000
+        throughput: 125
+      - name: io2
+        iops: 10000
+        throughput: 500
+    
+  object_storage:
+    providers:
+      aws_s3:
+        bucket_prefix: "container-storage"
+        versioning: enabled
+        lifecycle_rules:
+          - transition_days: 30
+            storage_class: STANDARD_IA
+          - transition_days: 90
+            storage_class: GLACIER
+      
+      azure_blob:
+        container_prefix: "container-storage"
+        access_tier: Hot
+        versioning: enabled
+        
+      gcp_storage:
+        bucket_prefix: "container-storage"
+        storage_class: STANDARD
+        versioning: enabled
+
+  backup_storage:
+    retention_policy:
+      daily: 7
+      weekly: 4
+      monthly: 3
+    encryption: AES-256

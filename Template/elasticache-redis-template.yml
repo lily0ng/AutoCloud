@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon ElastiCache Redis Cluster Template'
+
+Parameters:
+  ClusterName:
+    Type: String
+    Default: redis-cluster
+
+  CacheNodeType:
+    Type: String
+    Default: cache.t3.micro
+
+  NumCacheNodes:
+    Type: Number
+    Default: 1
+
+  EngineVersion:
+    Type: String
+    Default: '7.0'
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnet group for ElastiCache
+      SubnetIds: !Ref SubnetIds
+
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ElastiCache Redis
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 0.0.0.0/0
+
+  CacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      CacheClusterId: !Ref ClusterName
+      Engine: redis
+      EngineVersion: !Ref EngineVersion
+      CacheNodeType: !Ref CacheNodeType
+      NumCacheNodes: !Ref NumCacheNodes
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref CacheSecurityGroup
+      PreferredMaintenanceWindow: 'sun:03:00-sun:04:00'
+      SnapshotRetentionLimit: 5
+      SnapshotWindow: '02:00-03:00'
+      AutoMinorVersionUpgrade: true
+
+Outputs:
+  CacheEndpoint:
+    Value: !GetAtt CacheCluster.RedisEndpoint.Address
+  CachePort:
+    Value: !GetAtt CacheCluster.RedisEndpoint.Port

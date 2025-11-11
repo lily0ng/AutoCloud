@@ -1,0 +1,170 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@4.7
+
+commands:
+  restore-npm-cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v2-npm-deps-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v2-npm-deps-{{ .Branch }}-
+            - v2-npm-deps-
+
+  save-npm-cache:
+    steps:
+      - save_cache:
+          key: v2-npm-deps-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - node_modules
+
+  restore-build-cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v2-build-{{ .Branch }}-{{ .Revision }}
+            - v2-build-{{ .Branch }}-
+            - v2-build-
+
+  save-build-cache:
+    steps:
+      - save_cache:
+          key: v2-build-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - dist
+            - build
+            - .next
+            - public
+
+jobs:
+  install-dependencies:
+    docker:
+      - image: cimg/node:16.13
+    steps:
+      - checkout
+      - restore-npm-cache
+      - node/install-packages:
+          pkg-manager: npm
+          override-ci-command: npm ci
+      - save-npm-cache
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  lint:
+    docker:
+      - image: cimg/node:16.13
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run ESLint
+          command: npm run lint
+      - run:
+          name: Run Prettier Check
+          command: npm run prettier:check
+
+  test:
+    docker:
+      - image: cimg/node:16.13
+    parallelism: 4
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run Tests with Coverage
+          command: |
+            TESTFILES=$(circleci tests glob "src/**/*.test.js" | circleci tests split)
+            npm run test:coverage -- $TESTFILES
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: coverage
+          destination: coverage-report
+
+  build:
+    docker:
+      - image: cimg/node:16.13
+    resource_class: large
+    steps:
+      - attach_workspace:
+          at: .
+      - restore-build-cache
+      - run:
+          name: Build Application
+          command: npm run build
+      - save-build-cache
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+            - build
+            - .next
+            - public
+
+  e2e-tests:
+    docker:
+      - image: cimg/node:16.13-browsers
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install Cypress
+          command: npm install cypress
+      - restore_cache:
+          keys:
+            - v2-cypress-{{ checksum "package-lock.json" }}
+      - save_cache:
+          key: v2-cypress-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.cache/Cypress
+      - run:
+          name: Run E2E Tests
+          command: npm run cypress:run
+      - store_artifacts:
+          path: cypress/videos
+          destination: cypress-videos
+      - store_artifacts:
+          path: cypress/screenshots
+          destination: cypress-screenshots
+
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - install-dependencies
+      - lint:
+          requires:
+            - install-dependencies
+      - test:
+          requires:
+            - install-dependencies
+      - build:
+          requires:
+            - lint
+            - test
+      - e2e-tests:
+          requires:
+            - build
+Resources:
+  Skill:
+    Type: Alexa::ASK::Skill
+    Properties:
+      AuthenticationConfiguration:
+        RefreshToken: <String>
+        ClientSecret: <String>
+        ClientId: <String>
+      VendorId: <String>
+      SkillPackage:
+        S3Bucket: <String>
+        S3Key: <String>
+  CapacityReservation:
+    Type: AWS::EC2::CapacityReservation
+    Properties:
+      AvailabilityZone: <String>
+      InstanceCount: <Integer>
+      InstancePlatform: <String>
+      InstanceType: <String>

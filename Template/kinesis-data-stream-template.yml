@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon Kinesis Data Stream Template'
+
+Parameters:
+  StreamName:
+    Type: String
+    Default: MyKinesisStream
+  ShardCount:
+    Type: Number
+    Default: 1
+    MinValue: 1
+  RetentionPeriodHours:
+    Type: Number
+    Default: 24
+    MinValue: 24
+    MaxValue: 8760
+
+Resources:
+  KinesisStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: !Ref StreamName
+      ShardCount: !Ref ShardCount
+      RetentionPeriodHours: !Ref RetentionPeriodHours
+      StreamEncryption:
+        EncryptionType: KMS
+        KeyId: alias/aws/kinesis
+      Tags:
+        - Key: Name
+          Value: !Ref StreamName
+
+Outputs:
+  StreamArn:
+    Value: !GetAtt KinesisStream.Arn
+  StreamName:
+    Value: !Ref KinesisStream

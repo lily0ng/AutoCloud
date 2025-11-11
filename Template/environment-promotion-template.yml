@@ -1,0 +1,226 @@
+---
+# Environment Promotion Template
+# Dev -> Staging -> Production pipeline
+
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: multi-environment-promotion
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - env: development
+        cluster: https://dev-cluster
+        replicas: "1"
+        autoSync: "true"
+      - env: staging
+        cluster: https://staging-cluster
+        replicas: "2"
+        autoSync: "false"
+      - env: production
+        cluster: https://prod-cluster
+        replicas: "5"
+        autoSync: "false"
+  
+  template:
+    metadata:
+      name: 'myapp-{{env}}'
+      annotations:
+        notifications.argoproj.io/subscribe.on-sync-succeeded.slack: cicd-notifications
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/example/app-manifests
+        targetRevision: HEAD
+        path: 'k8s/overlays/{{env}}'
+        kustomize:
+          commonAnnotations:
+            environment: '{{env}}'
+      destination:
+        server: '{{cluster}}'
+        namespace: '{{env}}'
+      syncPolicy:
+        automated:
+          prune: '{{autoSync}}'
+          selfHeal: '{{autoSync}}'
+        syncOptions:
+        - CreateNamespace=true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promotion-pipeline
+  namespace: cicd
+data:
+  promote.sh: |
+    #!/bin/bash
+    set -e
+    
+    FROM_ENV=$1
+    TO_ENV=$2
+    VERSION=$3
+    
+    echo "Promoting version $VERSION from $FROM_ENV to $TO_ENV"
+    
+    # Validate source environment
+    if ! kubectl get deployment myapp -n $FROM_ENV &> /dev/null; then
+      echo "Error: Deployment not found in $FROM_ENV"
+      exit 1
+    fi
+    
+    # Run smoke tests in source environment
+    echo "Running smoke tests in $FROM_ENV..."
+    kubectl run smoke-test --image=curlimages/curl:latest --rm -i --restart=Never -- \
+      curl -f http://myapp.$FROM_ENV/health || exit 1
+    
+    # Get current image from source
+    CURRENT_IMAGE=$(kubectl get deployment myapp -n $FROM_ENV -o jsonpath='{.spec.template.spec.containers[0].image}')
+    echo "Current image in $FROM_ENV: $CURRENT_IMAGE"
+    
+    # Update target environment
+    echo "Updating $TO_ENV with image: $CURRENT_IMAGE"
+    kubectl set image deployment/myapp myapp=$CURRENT_IMAGE -n $TO_ENV
+    
+    # Wait for rollout
+    kubectl rollout status deployment/myapp -n $TO_ENV --timeout=5m
+    
+    # Run smoke tests in target environment
+    echo "Running smoke tests in $TO_ENV..."
+    kubectl run smoke-test --image=curlimages/curl:latest --rm -i --restart=Never -- \
+      curl -f http://myapp.$TO_ENV/health || {
+        echo "Smoke tests failed. Rolling back..."
+        kubectl rollout undo deployment/myapp -n $TO_ENV
+        exit 1
+      }
+    
+    echo "Promotion completed successfully"
+    
+    # Tag the release
+    git tag -a "$TO_ENV-$VERSION" -m "Promoted to $TO_ENV"
+    git push origin "$TO_ENV-$VERSION"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: environment-promotion
+  namespace: cicd
+spec:
+  params:
+    - name: from-env
+    - name: to-env
+    - name: version
+    - name: approval-required
+      default: "true"
+  
+  tasks:
+    - name: validate-source
+      taskRef:
+        name: validate-environment
+      params:
+        - name: environment
+          value: $(params.from-env)
+    
+    - name: run-tests
+      runAfter: [validate-source]
+      taskRef:
+        name: smoke-tests
+      params:
+        - name: environment
+          value: $(params.from-env)
+    
+    - name: approval-gate
+      runAfter: [run-tests]
+      when:
+        - input: "$(params.approval-required)"
+          operator: in
+          values: ["true"]
+      taskRef:
+        name: manual-approval
+      params:
+        - name: approvers
+          value: "ops-team@example.com"
+    
+    - name: promote
+      runAfter: [approval-gate]
+      taskRef:
+        name: promote-deployment
+      params:
+        - name: from-env
+          value: $(params.from-env)
+        - name: to-env
+          value: $(params.to-env)
+        - name: version
+          value: $(params.version)
+    
+    - name: verify-promotion
+      runAfter: [promote]
+      taskRef:
+        name: smoke-tests
+      params:
+        - name: environment
+          value: $(params.to-env)
+    
+    - name: notify
+      runAfter: [verify-promotion]
+      taskRef:
+        name: send-notification
+      params:
+        - name: message
+          value: "Successfully promoted $(params.version) to $(params.to-env)"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: manual-approval
+  namespace: cicd
+spec:
+  params:
+    - name: approvers
+  steps:
+    - name: wait-for-approval
+      image: alpine:latest
+      script: |
+        #!/bin/sh
+        echo "Waiting for approval from $(params.approvers)"
+        echo "Approval webhook: POST /approve?pipeline=environment-promotion"
+        # This would integrate with an approval system
+        sleep 300
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promotion-policy
+  namespace: cicd
+data:
+  policy.yaml: |
+    environments:
+      - name: development
+        auto_promote: true
+        next: staging
+        tests_required:
+          - unit
+          - integration
+      
+      - name: staging
+        auto_promote: false
+        next: production
+        approval_required: true
+        approvers:
+          - ops-lead@example.com
+          - dev-lead@example.com
+        tests_required:
+          - smoke
+          - performance
+          - security
+      
+      - name: production
+        auto_promote: false
+        approval_required: true
+        approvers:
+          - cto@example.com
+          - ops-director@example.com
+        tests_required:
+          - smoke
+        rollback_on_failure: true

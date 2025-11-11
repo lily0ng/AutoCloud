@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:latest
+    container_name: pocketbase
+    ports:
+      - "8090:8090"
+    volumes:
+      - pocketbase_data:/pb/pb_data
+      - pocketbase_public:/pb/pb_public
+    environment:
+      - ENCRYPTION_KEY=your-32-character-encryption-key
+    networks:
+      - pocketbase-net
+    restart: unless-stopped
+
+volumes:
+  pocketbase_data:
+    driver: local
+  pocketbase_public:
+    driver: local
+
+networks:
+  pocketbase-net:
+    driver: bridge

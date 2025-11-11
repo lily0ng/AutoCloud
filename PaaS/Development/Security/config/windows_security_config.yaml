@@ -1,0 +1,50 @@
+windows:
+  firewall:
+    enabled: true
+    profiles:
+      domain:
+        state: enabled
+        default_inbound: block
+        default_outbound: allow
+      private:
+        state: enabled
+        default_inbound: block
+        default_outbound: allow
+      public:
+        state: enabled
+        default_inbound: block
+        default_outbound: allow
+  antivirus:
+    windows_defender:
+      real_time_protection: true
+      cloud_protection: true
+      automatic_sample_submission: false
+      scheduled_scan:
+        enabled: true
+        day: sunday
+        time: "02:00"
+  bitlocker:
+    enabled: true
+    encryption_method: XtsAes256
+    system_drive: true
+    fixed_drives: true
+  updates:
+    auto_update: true
+    schedule:
+      day: sunday
+      time: "03:00"
+  password_policy:
+    complexity: true
+    min_length: 12
+    max_age: 90
+    history: 24
+    lockout:
+      threshold: 5
+      duration: 30
+  audit:
+    enabled: true
+    categories:
+      - system
+      - security
+      - application
+    retention_days: 90

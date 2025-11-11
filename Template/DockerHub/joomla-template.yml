@@ -1,0 +1,27 @@
+---
+# Joomla Website Template
+version: '3.8'
+services:
+  joomla:
+    image: joomla:latest
+    restart: always
+    ports: ["80:80"]
+    environment:
+      JOOMLA_DB_HOST: mysql
+      JOOMLA_DB_NAME: joomla
+      JOOMLA_DB_USER: joomla
+      JOOMLA_DB_PASSWORD: ${DB_PASSWORD:-joomlapass}
+    volumes: [joomla_data:/var/www/html]
+    depends_on: [mysql]
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: joomla
+      MYSQL_USER: joomla
+      MYSQL_PASSWORD: ${DB_PASSWORD:-joomlapass}
+      MYSQL_ROOT_PASSWORD: ${ROOT_PASSWORD:-rootpass}
+    volumes: [mysql_data:/var/lib/mysql]
+volumes:
+  joomla_data:
+  mysql_data:

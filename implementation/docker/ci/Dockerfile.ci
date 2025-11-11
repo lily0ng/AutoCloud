@@ -1,0 +1,27 @@
+# CI/CD Docker Image
+FROM docker:latest
+
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    python3 \
+    py3-pip \
+    make \
+    gcc \
+    musl-dev
+
+# Install docker-compose
+RUN pip3 install docker-compose
+
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/
+
+# Install helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+WORKDIR /workspace
+
+CMD ["/bin/bash"]

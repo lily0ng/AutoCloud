@@ -1,0 +1,58 @@
+# Makefile Template for DevOps Automation
+
+.PHONY: help build test deploy clean
+
+# Variables
+APP_NAME := myapp
+VERSION := $(shell git describe --tags --always --dirty)
+DOCKER_REGISTRY := docker.io
+IMAGE := $(DOCKER_REGISTRY)/$(APP_NAME):$(VERSION)
+
+help: ## Show this help message
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Available targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+install: ## Install dependencies
+	npm ci
+
+lint: ## Run linters
+	npm run lint
+
+test: ## Run tests
+	npm run test
+
+test-unit: ## Run unit tests
+	npm run test:unit
+
+test-integration: ## Run integration tests
+	docker-compose -f docker-compose.test.yml up -d
+	npm run test:integration
+	docker-compose -f docker-compose.test.yml down
+
+build: ## Build Docker image
+	docker build -t $(IMAGE) .
+
+push: ## Push Docker image
+	docker push $(IMAGE)
+
+deploy-staging: ## Deploy to staging
+	kubectl set image deployment/$(APP_NAME) $(APP_NAME)=$(IMAGE) -n staging
+	kubectl rollout status deployment/$(APP_NAME) -n staging
+
+deploy-prod: ## Deploy to production
+	kubectl set image deployment/$(APP_NAME) $(APP_NAME)=$(IMAGE) -n production
+	kubectl rollout status deployment/$(APP_NAME) -n production
+
+clean: ## Clean build artifacts
+	rm -rf dist/ build/ coverage/
+
+dev: ## Start development environment
+	docker-compose up -d
+
+down: ## Stop development environment
+	docker-compose down
+
+logs: ## View application logs
+	docker-compose logs -f app

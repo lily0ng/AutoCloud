@@ -1,0 +1,29 @@
+---
+# Matrix Synapse Chat Template
+version: '3.8'
+services:
+  synapse:
+    image: matrixdotorg/synapse:latest
+    restart: always
+    ports: ["8008:8008"]
+    environment:
+      SYNAPSE_SERVER_NAME: matrix.example.com
+      SYNAPSE_REPORT_STATS: "no"
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: synapse
+      POSTGRES_USER: synapse
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-synapsepass}
+    volumes: [synapse_data:/data]
+    depends_on: [postgres]
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: synapse
+      POSTGRES_USER: synapse
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-synapsepass}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes: [postgres_data:/var/lib/postgresql/data]
+volumes:
+  synapse_data:
+  postgres_data:

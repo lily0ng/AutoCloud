@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-main
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - db-network
+
+  postgres-replica:
+    image: postgres:15-alpine
+    container_name: postgres-replica
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: changeme
+    command: postgres -c 'hot_standby=on'
+    depends_on:
+      - postgres
+    networks:
+      - db-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: changeme
+      MYSQL_DATABASE: appdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - db-network
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: changeme
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - db-network
+
+  redis-cluster:
+    image: redis:7-alpine
+    container_name: redis-cluster
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf
+    ports:
+      - "7000:7000"
+    volumes:
+      - redis-cluster-data:/data
+    networks:
+      - db-network
+
+networks:
+  db-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  mysql-data:
+  mongodb-data:
+  redis-cluster-data:

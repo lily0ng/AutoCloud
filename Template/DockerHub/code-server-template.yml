@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - PASSWORD=password123
+      - SUDO_PASSWORD=sudopassword123
+    ports:
+      - "8443:8443"
+    volumes:
+      - code_server_config:/config
+      - code_server_workspace:/workspace
+    networks:
+      - code-server-net
+    restart: unless-stopped
+
+volumes:
+  code_server_config:
+  code_server_workspace:
+
+networks:
+  code-server-net:
+    driver: bridge

@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon Redshift Cluster Template'
+
+Parameters:
+  ClusterIdentifier:
+    Type: String
+    Default: redshift-cluster
+
+  NodeType:
+    Type: String
+    Default: dc2.large
+
+  NumberOfNodes:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 128
+
+  MasterUsername:
+    Type: String
+    Default: admin
+    NoEcho: true
+
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+
+  DatabaseName:
+    Type: String
+    Default: mydb
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  RedshiftSubnetGroup:
+    Type: AWS::Redshift::ClusterSubnetGroup
+    Properties:
+      Description: Subnet group for Redshift
+      SubnetIds: !Ref SubnetIds
+
+  RedshiftSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Redshift
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5439
+          ToPort: 5439
+          CidrIp: 0.0.0.0/0
+
+  RedshiftCluster:
+    Type: AWS::Redshift::Cluster
+    Properties:
+      ClusterIdentifier: !Ref ClusterIdentifier
+      NodeType: !Ref NodeType
+      NumberOfNodes: !Ref NumberOfNodes
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBName: !Ref DatabaseName
+      ClusterSubnetGroupName: !Ref RedshiftSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref RedshiftSecurityGroup
+      Encrypted: true
+      AutomatedSnapshotRetentionPeriod: 7
+      PreferredMaintenanceWindow: 'sun:03:00-sun:04:00'
+      PubliclyAccessible: false
+      IamRoles:
+        - !GetAtt RedshiftRole.Arn
+
+  RedshiftRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: redshift.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+Outputs:
+  ClusterEndpoint:
+    Value: !GetAtt RedshiftCluster.Endpoint.Address
+  ClusterPort:
+    Value: !GetAtt RedshiftCluster.Endpoint.Port

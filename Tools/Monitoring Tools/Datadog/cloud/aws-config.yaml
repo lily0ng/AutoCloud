@@ -1,0 +1,45 @@
+init_config:
+
+instances:
+  - min_collection_interval: 60
+    regions:
+      - us-east-1
+      - us-west-2  # Add more regions as needed
+
+    # AWS Integration configs
+    aws_access_key_id: "<AWS_ACCESS_KEY_ID>"
+    aws_secret_access_key: "<AWS_SECRET_ACCESS_KEY>"
+    
+    # AWS Services to monitor
+    services:
+      - ec2
+      - rds
+      - elasticache
+      - elb
+      - cloudfront
+      - lambda
+
+    # Metric Collection
+    metrics:
+      - CPUUtilization
+      - MemoryUtilization
+      - DiskReadOps
+      - DiskWriteOps
+      - NetworkIn
+      - NetworkOut
+
+    # Tags for better organization
+    tags:
+      - environment:production
+      - monitored_by:datadog
+
+    # Alert configurations
+    alerts:
+      cpu_high:
+        threshold: 80
+        duration: 300  # 5 minutes
+        notify: ["@ops-team"]
+      memory_high:
+        threshold: 85
+        duration: 300
+        notify: ["@ops-team"]

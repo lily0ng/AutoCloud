@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  appwrite:
+    image: appwrite/appwrite:1.4.13
+    container_name: appwrite
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      _APP_ENV: production
+      _APP_OPENSSL_KEY_V1: your-secret-key
+      _APP_DOMAIN: localhost
+      _APP_DOMAIN_TARGET: localhost
+      _APP_REDIS_HOST: redis
+      _APP_REDIS_PORT: 6379
+      _APP_DB_HOST: mariadb
+      _APP_DB_PORT: 3306
+      _APP_DB_SCHEMA: appwrite
+      _APP_DB_USER: appwrite
+      _APP_DB_PASS: appwrite123
+      _APP_STORAGE_LIMIT: 30000000
+    volumes:
+      - appwrite_uploads:/storage/uploads
+      - appwrite_cache:/storage/cache
+      - appwrite_config:/storage/config
+      - appwrite_certificates:/storage/certificates
+    depends_on:
+      - mariadb
+      - redis
+    networks:
+      - appwrite-net
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:10.11
+    container_name: appwrite-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: appwrite
+      MYSQL_USER: appwrite
+      MYSQL_PASSWORD: appwrite123
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - appwrite-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: appwrite-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - appwrite-net
+    restart: unless-stopped
+
+volumes:
+  appwrite_uploads:
+  appwrite_cache:
+  appwrite_config:
+  appwrite_certificates:
+  mariadb_data:
+  redis_data:
+
+networks:
+  appwrite-net:
+    driver: bridge

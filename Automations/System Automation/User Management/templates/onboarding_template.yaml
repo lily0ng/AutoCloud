@@ -1,0 +1,38 @@
+# Sample Onboarding Template
+# Use this template to define new users for batch onboarding
+
+department: Engineering
+location: HQ
+start_date: 2024-01-01
+
+users:
+  - username: john.doe
+    full_name: John Doe
+    role: staff
+    email: john.doe@example.com
+    department: Engineering
+    manager: jane.smith
+    access_groups:
+      - developers
+      - vpn-users
+    
+  - username: alice.johnson
+    full_name: Alice Johnson
+    role: manager
+    email: alice.johnson@example.com
+    department: Engineering
+    manager: bob.wilson
+    access_groups:
+      - managers
+      - developers
+      - vpn-users
+
+  - username: bob.wilson
+    full_name: Bob Wilson
+    role: admin
+    email: bob.wilson@example.com
+    department: IT
+    access_groups:
+      - admins
+      - developers
+      - vpn-users

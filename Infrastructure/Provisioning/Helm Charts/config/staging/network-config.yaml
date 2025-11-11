@@ -1,0 +1,25 @@
+network:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-staging
+    
+  serviceMesh:
+    enabled: true
+    istio:
+      enabled: true
+      mtls: true
+      
+  dns:
+    domain: staging.example.com
+    
+  loadBalancer:
+    type: internal
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+      
+  networkPolicies:
+    enabled: true
+    defaultDenyIngress: true
+    defaultDenyEgress: false

@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Certificate Manager Template'
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: Domain name for the certificate
+
+Resources:
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      SubjectAlternativeNames:
+        - !Sub '*.${DomainName}'
+      ValidationMethod: DNS
+      Tags:
+        - Key: Name
+          Value: !Ref DomainName
+
+Outputs:
+  CertificateArn:
+    Value: !Ref Certificate

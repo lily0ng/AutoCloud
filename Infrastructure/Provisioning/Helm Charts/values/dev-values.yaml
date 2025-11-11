@@ -1,0 +1,57 @@
+global:
+  environment: development
+  domain: dev.local
+  
+  resources:
+    requests:
+      cpu: "0.1"
+      memory: "128Mi"
+    limits:
+      cpu: "0.5"
+      memory: "256Mi"
+      
+  replicaCount: 1
+  
+  image:
+    pullPolicy: Always
+    tag: latest
+    
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      
+  monitoring:
+    enabled: true
+    prometheus:
+      scrape: true
+      path: /metrics
+      
+  logging:
+    level: debug
+    format: json
+    console: true
+    
+  security:
+    tls:
+      enabled: false
+    networkPolicies:
+      enabled: false
+      
+  autoscaling:
+    enabled: false
+    
+  storage:
+    class: standard
+    
+  debug:
+    enabled: true
+    endpoints:
+      - /debug
+      - /metrics
+      - /health
+    
+  development:
+    hot_reload: true
+    mock_services: true
+    sample_data: true

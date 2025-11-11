@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nocodb-postgres
+    environment:
+      POSTGRES_DB: nocodb
+      POSTGRES_USER: nocodb
+      POSTGRES_PASSWORD: nocodb123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nocodb-net
+    restart: unless-stopped
+
+  nocodb:
+    image: nocodb/nocodb:latest
+    container_name: nocodb
+    environment:
+      NC_DB: "pg://postgres:5432?u=nocodb&p=nocodb123&d=nocodb"
+      NC_AUTH_JWT_SECRET: your-jwt-secret
+    ports:
+      - "8080:8080"
+    volumes:
+      - nocodb_data:/usr/app/data
+    depends_on:
+      - postgres
+    networks:
+      - nocodb-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  nocodb_data:
+
+networks:
+  nocodb-net:
+    driver: bridge

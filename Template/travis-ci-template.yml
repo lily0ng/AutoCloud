@@ -1,0 +1,59 @@
+# Travis CI Template
+language: node_js
+node_js:
+  - '18'
+
+services:
+  - docker
+  - postgresql
+  - redis-server
+
+env:
+  global:
+    - DOCKER_COMPOSE_VERSION=2.20.0
+    - DATABASE_URL=postgresql://postgres@localhost/testdb
+
+cache:
+  directories:
+    - node_modules
+    - $HOME/.npm
+
+before_install:
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+
+install:
+  - npm ci
+
+script:
+  - npm run lint
+  - npm run test
+  - npm run build
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
+before_deploy:
+  - docker build -t $DOCKER_USERNAME/myapp:$TRAVIS_COMMIT .
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker push $DOCKER_USERNAME/myapp:$TRAVIS_COMMIT
+
+deploy:
+  - provider: script
+    script: bash scripts/deploy-staging.sh
+    on:
+      branch: develop
+  
+  - provider: script
+    script: bash scripts/deploy-production.sh
+    on:
+      branch: main
+
+notifications:
+  slack:
+    rooms:
+      - secure: "encrypted-slack-token"
+    on_success: change
+    on_failure: always

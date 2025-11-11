@@ -1,0 +1,177 @@
+version: '3.8'
+
+# Docker Swarm Cluster Template
+# Description: Template for deploying services in Docker Swarm mode
+
+services:
+  web:
+    image: ${WEB_IMAGE:-nginx:alpine}
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role == worker
+        preferences:
+          - spread: node.labels.zone
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.web.rule=Host(`example.com`)"
+        - "traefik.http.services.web.loadbalancer.server.port=80"
+    networks:
+      - overlay-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  api:
+    image: ${API_IMAGE:-api:latest}
+    deploy:
+      replicas: 5
+      update_config:
+        parallelism: 2
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == worker
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+    secrets:
+      - db_password
+      - api_key
+    configs:
+      - source: api_config
+        target: /app/config.yml
+    networks:
+      - overlay-network
+      - backend-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  database:
+    image: postgres:15-alpine
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.type == database
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_DB=${DB_NAME}
+    secrets:
+      - db_password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend-network
+
+  redis:
+    image: redis:7-alpine
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.type == cache
+      restart_policy:
+        condition: on-failure
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend-network
+
+  traefik:
+    image: traefik:v2.10
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dashboard.rule=Host(`traefik.example.com`)"
+        - "traefik.http.routers.dashboard.service=api@internal"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - overlay-network
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+networks:
+  overlay-network:
+    driver: overlay
+    attachable: true
+  backend-network:
+    driver: overlay
+    internal: true
+
+volumes:
+  db-data:
+    driver: local
+  redis-data:
+    driver: local
+
+secrets:
+  db_password:
+    external: true
+  api_key:
+    external: true
+
+configs:
+  api_config:
+    external: true

@@ -1,0 +1,24 @@
+azure:
+  regions:
+    - eastus
+    - westus2
+  vm_sizes:
+    - Standard_B1s
+    - Standard_B2s
+    - Standard_B2ms
+  os_configurations:
+    ubuntu2004:
+      publisher: Canonical
+      offer: UbuntuServer
+      sku: "20.04-LTS"
+      version: latest
+    windows2019:
+      publisher: MicrosoftWindowsServer
+      offer: WindowsServer
+      sku: "2019-Datacenter"
+      version: latest
+    redhat8:
+      publisher: RedHat
+      offer: RHEL
+      sku: "8"
+      version: latest

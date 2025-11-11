@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Transit Gateway Template'
+
+Parameters:
+  AmazonSideAsn:
+    Type: Number
+    Default: 64512
+
+Resources:
+  TransitGateway:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      AmazonSideAsn: !Ref AmazonSideAsn
+      DefaultRouteTableAssociation: enable
+      DefaultRouteTablePropagation: enable
+      DnsSupport: enable
+      VpnEcmpSupport: enable
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-TGW'
+
+Outputs:
+  TransitGatewayId:
+    Value: !Ref TransitGateway

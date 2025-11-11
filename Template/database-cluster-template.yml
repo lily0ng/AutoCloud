@@ -1,0 +1,99 @@
+---
+# Database Cluster Template
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-cluster
+  namespace: database
+spec:
+  instances: 3
+  primaryUpdateStrategy: unsupervised
+  
+  postgresql:
+    parameters:
+      max_connections: "300"
+      shared_buffers: "2GB"
+      effective_cache_size: "6GB"
+      maintenance_work_mem: "512MB"
+      checkpoint_completion_target: "0.9"
+      wal_buffers: "16MB"
+      default_statistics_target: "100"
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+      work_mem: "16MB"
+      min_wal_size: "1GB"
+      max_wal_size: "4GB"
+  
+  bootstrap:
+    initdb:
+      database: mydb
+      owner: myuser
+      secret:
+        name: postgres-cluster-secret
+  
+  storage:
+    size: 100Gi
+    storageClass: fast-ssd
+  
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://postgres-backups/
+      s3Credentials:
+        accessKeyId:
+          name: aws-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: aws-credentials
+          key: SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+        encryption: AES256
+    retentionPolicy: "30d"
+  
+  monitoring:
+    enablePodMonitor: true
+  
+  resources:
+    requests:
+      cpu: "1"
+      memory: 4Gi
+    limits:
+      cpu: "2"
+      memory: 8Gi
+  
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: cnpg.io/cluster
+            operator: In
+            values:
+            - postgres-cluster
+        topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-cluster-rw
+  namespace: database
+spec:
+  selector:
+    cnpg.io/cluster: postgres-cluster
+    role: primary
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-cluster-ro
+  namespace: database
+spec:
+  selector:
+    cnpg.io/cluster: postgres-cluster
+    role: replica
+  ports:
+  - port: 5432
+    targetPort: 5432

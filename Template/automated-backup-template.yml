@@ -1,0 +1,292 @@
+---
+# Automated Backup Template
+# Comprehensive automated backup configuration for scheduled backups
+
+apiVersion: backup.autocloud.io/v1
+kind: AutomatedBackup
+metadata:
+  name: automated-backup
+  namespace: backup-system
+  labels:
+    app: backup-automation
+    environment: production
+    backup-type: automated
+  annotations:
+    description: "Automated backup configuration with scheduling and retention"
+    version: "1.0.0"
+
+spec:
+  # Backup Schedule Configuration
+  schedule:
+    # Cron expression for backup timing
+    cron: "0 2 * * *"  # Daily at 2 AM
+    timezone: "UTC"
+    enabled: true
+    
+    # Multiple schedule support
+    schedules:
+      - name: daily-backup
+        cron: "0 2 * * *"
+        type: incremental
+        retention: 7
+        
+      - name: weekly-backup
+        cron: "0 3 * * 0"  # Sunday at 3 AM
+        type: full
+        retention: 4
+        
+      - name: monthly-backup
+        cron: "0 4 1 * *"  # 1st of month at 4 AM
+        type: full
+        retention: 12
+
+  # Backup Source Configuration
+  source:
+    type: multi-source
+    sources:
+      - name: application-data
+        type: filesystem
+        path: /var/app/data
+        exclude:
+          - "*.tmp"
+          - "*.log"
+          - "cache/*"
+        
+      - name: database
+        type: database
+        engine: postgresql
+        host: db.example.com
+        port: 5432
+        database: production_db
+        credentialsSecret: db-backup-credentials
+        
+      - name: configuration
+        type: filesystem
+        path: /etc/app/config
+        
+      - name: user-uploads
+        type: s3
+        bucket: user-uploads-prod
+        region: us-east-1
+
+  # Backup Destination Configuration
+  destination:
+    primary:
+      type: s3
+      bucket: backups-primary
+      region: us-east-1
+      prefix: automated-backups/
+      storageClass: STANDARD_IA
+      encryption:
+        enabled: true
+        type: AES256
+        kmsKeyId: arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+      
+    secondary:
+      type: azure-blob
+      storageAccount: backupstorage
+      container: automated-backups
+      region: eastus
+      encryption:
+        enabled: true
+        type: Microsoft.Storage
+
+  # Backup Options
+  options:
+    compression:
+      enabled: true
+      algorithm: gzip
+      level: 6
+      
+    encryption:
+      enabled: true
+      algorithm: AES-256-GCM
+      keyManagement: aws-kms
+      
+    deduplication:
+      enabled: true
+      blockSize: 4MB
+      
+    parallelism:
+      enabled: true
+      threads: 4
+      maxBandwidth: 100MB/s
+      
+    verification:
+      enabled: true
+      method: checksum
+      algorithm: SHA256
+      
+    notification:
+      enabled: true
+      onSuccess: true
+      onFailure: true
+      channels:
+        - type: email
+          recipients:
+            - ops@example.com
+            - backup-admin@example.com
+        - type: slack
+          webhook: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+          channel: "#backup-alerts"
+        - type: pagerduty
+          serviceKey: YOUR_PAGERDUTY_SERVICE_KEY
+
+  # Retention Policy
+  retention:
+    policy: GFS  # Grandfather-Father-Son
+    daily: 7
+    weekly: 4
+    monthly: 12
+    yearly: 3
+    
+    rules:
+      - name: short-term
+        duration: 7d
+        type: incremental
+        
+      - name: medium-term
+        duration: 30d
+        type: full
+        
+      - name: long-term
+        duration: 365d
+        type: full
+        archiveToGlacier: true
+
+  # Performance Settings
+  performance:
+    bandwidth:
+      limit: 100MB/s
+      schedule:
+        - time: "09:00-17:00"
+          limit: 50MB/s  # Reduced during business hours
+        - time: "17:00-09:00"
+          limit: 100MB/s
+    
+    resources:
+      cpu: "2"
+      memory: "4Gi"
+      storage: "100Gi"
+
+  # Monitoring and Logging
+  monitoring:
+    enabled: true
+    metrics:
+      - backup_duration_seconds
+      - backup_size_bytes
+      - backup_success_total
+      - backup_failure_total
+      - backup_verification_status
+    
+    logging:
+      level: info
+      destination: /var/log/backup/automated-backup.log
+      rotation:
+        maxSize: 100MB
+        maxAge: 30
+        maxBackups: 10
+
+  # Hooks and Scripts
+  hooks:
+    preBackup:
+      - name: database-consistency-check
+        script: /scripts/pre-backup-db-check.sh
+        timeout: 300
+        
+      - name: application-quiesce
+        script: /scripts/quiesce-app.sh
+        timeout: 60
+        
+    postBackup:
+      - name: application-resume
+        script: /scripts/resume-app.sh
+        timeout: 60
+        
+      - name: backup-verification
+        script: /scripts/verify-backup.sh
+        timeout: 600
+        
+    onFailure:
+      - name: cleanup-partial-backup
+        script: /scripts/cleanup-failed-backup.sh
+        timeout: 300
+        
+      - name: alert-oncall
+        script: /scripts/alert-oncall.sh
+        timeout: 30
+
+  # Advanced Configuration
+  advanced:
+    # Incremental backup configuration
+    incremental:
+      enabled: true
+      baseBackupRetention: 30d
+      chainLength: 7
+      
+    # Snapshot support
+    snapshot:
+      enabled: true
+      provider: aws-ebs
+      retainSnapshot: true
+      
+    # Backup validation
+    validation:
+      enabled: true
+      frequency: weekly
+      restoreTest: true
+      testEnvironment: backup-validation
+      
+    # Disaster recovery
+    disasterRecovery:
+      enabled: true
+      rpo: 24h  # Recovery Point Objective
+      rto: 4h   # Recovery Time Objective
+      replicationSites:
+        - region: us-west-2
+          type: async
+        - region: eu-west-1
+          type: async
+
+  # Security Settings
+  security:
+    accessControl:
+      enabled: true
+      rbac: true
+      allowedRoles:
+        - backup-admin
+        - backup-operator
+        
+    audit:
+      enabled: true
+      logAllAccess: true
+      retentionDays: 90
+      
+    compliance:
+      enabled: true
+      standards:
+        - HIPAA
+        - SOC2
+        - GDPR
+      
+    immutability:
+      enabled: true
+      lockDuration: 30d
+
+---
+# Example Usage and Configuration Notes
+#
+# 1. Deploy this template:
+#    kubectl apply -f automated-backup-template.yml
+#
+# 2. Monitor backup jobs:
+#    kubectl get backups -n backup-system
+#
+# 3. View backup logs:
+#    kubectl logs -n backup-system -l app=backup-automation
+#
+# 4. Trigger manual backup:
+#    kubectl create job --from=cronjob/automated-backup manual-backup-$(date +%s)
+#
+# 5. Restore from backup:
+#    See restore-template.yml for restore procedures

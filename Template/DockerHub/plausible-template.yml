@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: plausible-postgres
+    environment:
+      POSTGRES_DB: plausible
+      POSTGRES_USER: plausible
+      POSTGRES_PASSWORD: plausible123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - plausible-net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.3-alpine
+    container_name: plausible-clickhouse
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - plausible-net
+
+  plausible:
+    image: plausible/analytics:v2.0
+    container_name: plausible
+    command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
+    ports:
+      - "8000:8000"
+    environment:
+      BASE_URL: http://localhost:8000
+      SECRET_KEY_BASE: your-secret-key-base-min-64-chars
+      DATABASE_URL: postgres://plausible:plausible123@postgres:5432/plausible
+      CLICKHOUSE_DATABASE_URL: http://clickhouse:8123/plausible
+    depends_on:
+      - postgres
+      - clickhouse
+    networks:
+      - plausible-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+
+networks:
+  plausible-net:
+    driver: bridge

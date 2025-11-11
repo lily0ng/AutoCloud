@@ -1,0 +1,32 @@
+apiVersion: '2021-10-01'
+name: container-app
+location: eastus
+properties:
+  containers:
+  - name: web
+    properties:
+      image: nginx:latest
+      ports:
+      - port: 80
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+  - name: api
+    properties:
+      image: node:16-alpine
+      ports:
+      - port: 3000
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+  ipAddress:
+    type: Public
+    ports:
+    - protocol: tcp
+      port: 80
+  osType: Linux
+  restartPolicy: Always
+  networkProfile:
+    id: /subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Network/networkProfiles/{network-profile-name}

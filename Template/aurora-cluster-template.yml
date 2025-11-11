@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon Aurora Cluster Template'
+
+Parameters:
+  ClusterIdentifier:
+    Type: String
+    Default: aurora-cluster
+
+  Engine:
+    Type: String
+    Default: aurora-mysql
+    AllowedValues:
+      - aurora-mysql
+      - aurora-postgresql
+
+  EngineVersion:
+    Type: String
+    Default: '8.0.mysql_aurora.3.04.0'
+
+  DBInstanceClass:
+    Type: String
+    Default: db.r6g.large
+
+  MasterUsername:
+    Type: String
+    Default: admin
+    NoEcho: true
+
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Aurora
+      SubnetIds: !Ref SubnetIds
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Aurora
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+
+  DBCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      DBClusterIdentifier: !Ref ClusterIdentifier
+      Engine: !Ref Engine
+      EngineVersion: !Ref EngineVersion
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref DBSecurityGroup
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      StorageEncrypted: true
+      EnableCloudwatchLogsExports:
+        - audit
+        - error
+        - general
+        - slowquery
+
+  DBInstance1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub '${ClusterIdentifier}-instance-1'
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: !Ref Engine
+      DBClusterIdentifier: !Ref DBCluster
+
+  DBInstance2:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub '${ClusterIdentifier}-instance-2'
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: !Ref Engine
+      DBClusterIdentifier: !Ref DBCluster
+
+Outputs:
+  ClusterEndpoint:
+    Value: !GetAtt DBCluster.Endpoint.Address
+  ReaderEndpoint:
+    Value: !GetAtt DBCluster.ReadEndpoint.Address

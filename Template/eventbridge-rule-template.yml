@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon EventBridge Rule Template'
+
+Parameters:
+  RuleName:
+    Type: String
+    Default: MyEventBridgeRule
+
+Resources:
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Ref RuleName
+      Description: EventBridge rule
+      EventPattern:
+        source:
+          - aws.ec2
+        detail-type:
+          - EC2 Instance State-change Notification
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt SNSTopic.Arn
+          Id: SNSTarget
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${RuleName}-Topic'
+
+  EventTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref SNSTopic
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref SNSTopic
+
+Outputs:
+  RuleArn:
+    Value: !GetAtt EventRule.Arn

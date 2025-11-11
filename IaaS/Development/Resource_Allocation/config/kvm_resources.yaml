@@ -1,0 +1,49 @@
+---
+# KVM Resource Allocation Configuration
+vm_profiles:
+  basic:
+    vcpu: 1
+    memory: 2048  # MB
+    storage: 20   # GB
+    network:
+      type: "virtio"
+      bandwidth: 1000  # Mbps
+  standard:
+    vcpu: 2
+    memory: 4096
+    storage: 50
+    network:
+      type: "virtio"
+      bandwidth: 2000
+  premium:
+    vcpu: 4
+    memory: 8192
+    storage: 100
+    network:
+      type: "virtio"
+      bandwidth: 4000
+
+storage_pools:
+  local:
+    type: "dir"
+    path: "/var/lib/libvirt/images"
+    allocation: "thin"
+  iscsi:
+    type: "iscsi"
+    allocation: "thick"
+    multipath: true
+
+network_config:
+  bridges:
+    - name: "br0"
+      type: "linux-bridge"
+      mtu: 1500
+    - name: "ovs0"
+      type: "openvswitch"
+      mtu: 9000
+
+resource_limits:
+  max_vcpu_per_vm: 16
+  max_memory_per_vm: 32768  # MB
+  max_storage_per_vm: 500   # GB
+  max_network_interfaces: 8

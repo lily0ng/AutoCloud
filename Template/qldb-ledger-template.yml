@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon QLDB Ledger Template'
+
+Parameters:
+  LedgerName:
+    Type: String
+    Default: my-ledger
+
+  PermissionsMode:
+    Type: String
+    Default: STANDARD
+    AllowedValues:
+      - ALLOW_ALL
+      - STANDARD
+
+  DeletionProtection:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+
+Resources:
+  QLDBLedger:
+    Type: AWS::QLDB::Ledger
+    Properties:
+      Name: !Ref LedgerName
+      PermissionsMode: !Ref PermissionsMode
+      DeletionProtection: !Ref DeletionProtection
+      Tags:
+        - Key: Name
+          Value: !Ref LedgerName
+
+Outputs:
+  LedgerArn:
+    Value: !GetAtt QLDBLedger.Arn

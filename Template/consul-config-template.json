@@ -1,0 +1,24 @@
+{
+  "datacenter": "dc1",
+  "data_dir": "/opt/consul",
+  "log_level": "INFO",
+  "node_name": "consul-server",
+  "server": true,
+  "bootstrap_expect": 3,
+  "ui": true,
+  "client_addr": "0.0.0.0",
+  "bind_addr": "0.0.0.0",
+  "advertise_addr": "{{ GetInterfaceIP \"eth0\" }}",
+  "retry_join": [
+    "consul-server-1",
+    "consul-server-2",
+    "consul-server-3"
+  ],
+  "encrypt": "encryption-key-here",
+  "verify_incoming": true,
+  "verify_outgoing": true,
+  "verify_server_hostname": true,
+  "ca_file": "/etc/consul.d/ca.pem",
+  "cert_file": "/etc/consul.d/cert.pem",
+  "key_file": "/etc/consul.d/key.pem"
+}

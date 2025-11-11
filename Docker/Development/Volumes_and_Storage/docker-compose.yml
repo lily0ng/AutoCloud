@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Example with named volume
+  database:
+    image: postgres:latest
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: example
+
+  # Example with bind mount
+  web_app:
+    build: ./bind-mount-example
+    volumes:
+      - ./bind-mount-example:/app
+    ports:
+      - "8080:8080"
+
+  # Example with tmpfs
+  cache:
+    image: redis:latest
+    tmpfs:
+      - /data:size=100M
+    
+  # Example with shared volume
+  backup_service:
+    image: alpine
+    volumes:
+      - db_data:/backup/data:ro
+    command: ["tail", "-f", "/dev/null"]
+
+volumes:
+  db_data:
+    name: my_persistent_data

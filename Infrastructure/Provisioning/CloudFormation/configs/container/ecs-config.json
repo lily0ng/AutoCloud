@@ -1,0 +1,60 @@
+{
+    "Parameters": {
+        "EnvironmentName": "Production",
+        "ClusterName": "main-application",
+        "ContainerImage": "nginx:latest",
+        "ContainerPort": 80,
+        "DesiredCount": 2,
+        "TaskCPU": "256",
+        "TaskMemory": "512"
+    },
+    "EnvironmentConfigs": {
+        "Development": {
+            "DesiredCount": 1,
+            "TaskCPU": "256",
+            "TaskMemory": "512",
+            "AutoScaling": {
+                "MinCapacity": 1,
+                "MaxCapacity": 2
+            }
+        },
+        "Staging": {
+            "DesiredCount": 2,
+            "TaskCPU": "512",
+            "TaskMemory": "1024",
+            "AutoScaling": {
+                "MinCapacity": 2,
+                "MaxCapacity": 4
+            }
+        },
+        "Production": {
+            "DesiredCount": 4,
+            "TaskCPU": "1024",
+            "TaskMemory": "2048",
+            "AutoScaling": {
+                "MinCapacity": 4,
+                "MaxCapacity": 8
+            }
+        }
+    },
+    "ContainerDefinitions": {
+        "nginx": {
+            "Image": "nginx:latest",
+            "Port": 80,
+            "CPU": 256,
+            "Memory": 512,
+            "HealthCheck": {
+                "Command": ["CMD-SHELL", "curl -f http://localhost/ || exit 1"],
+                "Interval": 30,
+                "Timeout": 5,
+                "Retries": 3
+            }
+        }
+    },
+    "Tags": {
+        "Project": "ContainerInfra",
+        "Environment": "Production",
+        "Owner": "Container-Team",
+        "CostCenter": "IT-Containers"
+    }
+}

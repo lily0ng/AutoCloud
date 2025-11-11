@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'NAT Gateway Template'
+
+Parameters:
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+
+Resources:
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId: !Ref SubnetId
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-NAT'
+
+Outputs:
+  NATGatewayId:
+    Value: !Ref NATGateway
+  ElasticIP:
+    Value: !Ref ElasticIP

@@ -1,0 +1,50 @@
+init_config:
+
+instances:
+  - project_id: "<YOUR_GCP_PROJECT_ID>"
+    private_key_id: "<GCP_PRIVATE_KEY_ID>"
+    private_key: "<GCP_PRIVATE_KEY>"
+    client_email: "<GCP_SERVICE_ACCOUNT_EMAIL>"
+    client_id: "<GCP_CLIENT_ID>"
+
+    # Services to monitor
+    services:
+      - compute
+      - cloudsql
+      - cloudrun
+      - gke
+      - pubsub
+      - storage
+
+    # Metric Collection Configuration
+    collection_interval: 60
+    metrics:
+      - instance/cpu/utilization
+      - instance/memory/usage
+      - instance/disk/read_bytes_count
+      - instance/disk/write_bytes_count
+      - instance/network/received_bytes_count
+      - instance/network/sent_bytes_count
+
+    # Resource filters
+    resource_filters:
+      - resource.type = "gce_instance"
+      - resource.type = "cloudsql_database"
+      - resource.type = "k8s_container"
+
+    # Tags
+    tags:
+      - environment:production
+      - cloud:gcp
+      - monitored_by:datadog
+
+    # Alerting configurations
+    alerts:
+      cpu_utilization:
+        threshold: 80
+        duration: "5m"
+        notification_channels: ["email", "slack"]
+      memory_usage:
+        threshold: 85
+        duration: "5m"
+        notification_channels: ["email", "slack"]

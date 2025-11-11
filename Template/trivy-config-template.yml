@@ -1,0 +1,30 @@
+# Trivy Configuration Template
+scan:
+  security-checks:
+    - vuln
+    - config
+    - secret
+  
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+  
+  ignore-unfixed: true
+  
+  skip-dirs:
+    - node_modules
+    - vendor
+  
+  skip-files:
+    - '**/*.test.js'
+    - '**/*.spec.js'
+
+vulnerability:
+  type:
+    - os
+    - library
+  
+  ignore:
+    - CVE-2021-12345
+    - CVE-2021-67890

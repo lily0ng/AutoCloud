@@ -1,0 +1,57 @@
+service_mesh:
+  provider: istio
+  version: "1.14"
+  
+  mtls:
+    enabled: true
+    mode: STRICT
+    
+  traffic_management:
+    circuit_breaker:
+      consecutive_errors: 5
+      interval: 10s
+      base_ejection_time: 30s
+      
+    retry_policy:
+      attempts: 3
+      timeout: 2s
+      
+    load_balancing:
+      simple: ROUND_ROBIN
+      consistent_hash:
+        http_header: "x-user-id"
+        
+  security:
+    authorization:
+      enabled: true
+      mode: CUSTOM
+      
+    jwt:
+      issuer: "https://auth.example.com"
+      audiences: ["web", "mobile"]
+      
+  observability:
+    tracing:
+      enabled: true
+      sampling_rate: 0.1
+      provider: jaeger
+      
+    metrics:
+      enabled: true
+      prometheus: true
+      
+    access_logging:
+      enabled: true
+      format: JSON
+      
+  gateways:
+    ingress:
+      ports:
+        - number: 80
+          protocol: HTTP
+        - number: 443
+          protocol: HTTPS
+          
+    egress:
+      enabled: true
+      mode: REGISTRY_ONLY

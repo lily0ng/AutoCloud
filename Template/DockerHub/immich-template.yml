@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: tensorchord/pgvecto-rs:pg14-v0.2.0
+    container_name: immich-postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - immich-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: immich-redis
+    networks:
+      - immich-net
+
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    command: ['start.sh', 'immich']
+    volumes:
+      - upload_data:/usr/src/app/upload
+    environment:
+      DB_HOSTNAME: postgres
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - immich-net
+    restart: unless-stopped
+
+  immich-microservices:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-microservices
+    command: ['start.sh', 'microservices']
+    volumes:
+      - upload_data:/usr/src/app/upload
+    environment:
+      DB_HOSTNAME: postgres
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - immich-net
+    restart: unless-stopped
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich-machine-learning
+    volumes:
+      - model_cache:/cache
+    networks:
+      - immich-net
+    restart: unless-stopped
+
+  immich-web:
+    image: ghcr.io/immich-app/immich-web:release
+    container_name: immich-web
+    networks:
+      - immich-net
+    restart: unless-stopped
+
+  immich-proxy:
+    image: ghcr.io/immich-app/immich-proxy:release
+    container_name: immich-proxy
+    ports:
+      - "2283:8080"
+    depends_on:
+      - immich-server
+      - immich-web
+    networks:
+      - immich-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  upload_data:
+  model_cache:
+
+networks:
+  immich-net:
+    driver: bridge

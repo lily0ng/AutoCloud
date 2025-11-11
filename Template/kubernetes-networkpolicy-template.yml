@@ -1,0 +1,48 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ${APP_NAME}-network-policy
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP_NAME}
+    environment: ${ENVIRONMENT}
+spec:
+  podSelector:
+    matchLabels:
+      app: ${APP_NAME}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ${ALLOWED_NAMESPACE}
+    - podSelector:
+        matchLabels:
+          role: ${ALLOWED_ROLE}
+    ports:
+    - protocol: TCP
+      port: ${APP_PORT}
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - podSelector:
+        matchLabels:
+          role: database
+    ports:
+    - protocol: TCP
+      port: ${DB_PORT}
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443

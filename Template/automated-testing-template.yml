@@ -1,0 +1,247 @@
+---
+# Automated Testing Template
+# Comprehensive test suite configuration
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config
+  namespace: cicd
+data:
+  jest.config.js: |
+    module.exports = {
+      testEnvironment: 'node',
+      coverageDirectory: 'coverage',
+      collectCoverageFrom: [
+        'src/**/*.{js,ts}',
+        '!src/**/*.test.{js,ts}',
+        '!src/**/*.spec.{js,ts}'
+      ],
+      coverageThreshold: {
+        global: {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80
+        }
+      },
+      testMatch: [
+        '**/__tests__/**/*.[jt]s?(x)',
+        '**/?(*.)+(spec|test).[jt]s?(x)'
+      ]
+    };
+  
+  playwright.config.ts: |
+    import { defineConfig } from '@playwright/test';
+    
+    export default defineConfig({
+      testDir: './e2e',
+      fullyParallel: true,
+      forbidOnly: !!process.env.CI,
+      retries: process.env.CI ? 2 : 0,
+      workers: process.env.CI ? 1 : undefined,
+      reporter: 'html',
+      use: {
+        baseURL: process.env.BASE_URL || 'http://localhost:3000',
+        trace: 'on-first-retry',
+        screenshot: 'only-on-failure',
+      },
+      projects: [
+        {
+          name: 'chromium',
+          use: { browserName: 'chromium' },
+        },
+        {
+          name: 'firefox',
+          use: { browserName: 'firefox' },
+        },
+        {
+          name: 'webkit',
+          use: { browserName: 'webkit' },
+        },
+      ],
+    });
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: automated-testing
+  namespace: cicd
+spec:
+  params:
+    - name: git-url
+    - name: git-revision
+  
+  workspaces:
+    - name: source
+  
+  tasks:
+    - name: checkout
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: source
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+    
+    - name: unit-tests
+      runAfter: [checkout]
+      taskRef:
+        name: npm-test
+      workspaces:
+        - name: source
+          workspace: source
+      params:
+        - name: test-command
+          value: "npm run test:unit -- --coverage"
+    
+    - name: integration-tests
+      runAfter: [unit-tests]
+      taskRef:
+        name: npm-test
+      workspaces:
+        - name: source
+          workspace: source
+      params:
+        - name: test-command
+          value: "npm run test:integration"
+    
+    - name: e2e-tests
+      runAfter: [integration-tests]
+      taskRef:
+        name: playwright-test
+      workspaces:
+        - name: source
+          workspace: source
+    
+    - name: performance-tests
+      runAfter: [e2e-tests]
+      taskRef:
+        name: k6-test
+      workspaces:
+        - name: source
+          workspace: source
+    
+    - name: security-tests
+      runAfter: [checkout]
+      taskRef:
+        name: owasp-zap
+      workspaces:
+        - name: source
+          workspace: source
+    
+    - name: publish-results
+      runAfter: [unit-tests, integration-tests, e2e-tests, performance-tests, security-tests]
+      taskRef:
+        name: publish-test-results
+      workspaces:
+        - name: source
+          workspace: source
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: npm-test
+  namespace: cicd
+spec:
+  params:
+    - name: test-command
+  workspaces:
+    - name: source
+  steps:
+    - name: install
+      image: node:18
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        npm ci
+    
+    - name: test
+      image: node:18
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        $(params.test-command)
+      env:
+        - name: CI
+          value: "true"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: playwright-test
+  namespace: cicd
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: install-browsers
+      image: mcr.microsoft.com/playwright:latest
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        npm ci
+        npx playwright install
+    
+    - name: run-tests
+      image: mcr.microsoft.com/playwright:latest
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        npx playwright test
+      env:
+        - name: CI
+          value: "true"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: k6-test
+  namespace: cicd
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: performance-test
+      image: grafana/k6:latest
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        k6 run tests/performance/load-test.js
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-test-script
+  namespace: cicd
+data:
+  load-test.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    
+    export const options = {
+      stages: [
+        { duration: '2m', target: 100 },
+        { duration: '5m', target: 100 },
+        { duration: '2m', target: 200 },
+        { duration: '5m', target: 200 },
+        { duration: '2m', target: 0 },
+      ],
+      thresholds: {
+        http_req_duration: ['p(95)<500'],
+        http_req_failed: ['rate<0.01'],
+      },
+    };
+    
+    export default function () {
+      const res = http.get('http://test.example.com/api/health');
+      check(res, {
+        'status is 200': (r) => r.status === 200,
+        'response time < 500ms': (r) => r.timings.duration < 500,
+      });
+      sleep(1);
+    }

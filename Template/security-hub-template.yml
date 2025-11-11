@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Security Hub Template'
+
+Resources:
+  SecurityHub:
+    Type: AWS::SecurityHub::Hub
+    Properties:
+      Tags:
+        Environment: Production
+
+Outputs:
+  SecurityHubArn:
+    Value: !Ref SecurityHub

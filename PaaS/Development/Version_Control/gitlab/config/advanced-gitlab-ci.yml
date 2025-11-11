@@ -1,0 +1,160 @@
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+
+variables:
+  DOCKER_REGISTRY: ${CI_REGISTRY}
+  KUBERNETES_NAMESPACE: ${CI_ENVIRONMENT_SLUG}
+  APP_VERSION: ${CI_COMMIT_SHA}
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG
+      variables:
+        ENVIRONMENT: production
+    - if: $CI_COMMIT_BRANCH == "main"
+      variables:
+        ENVIRONMENT: staging
+    - if: $CI_MERGE_REQUEST_ID
+      variables:
+        ENVIRONMENT: review
+
+stages:
+  - validate
+  - test
+  - security
+  - build
+  - deploy
+  - monitor
+  - cleanup
+
+# Validation Jobs
+lint:
+  stage: validate
+  image: python:3.9
+  script:
+    - pip install pylint
+    - pylint **/*.py
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+code_quality:
+  stage: validate
+  image: docker:stable
+  services:
+    - docker:dind
+  script:
+    - docker run --env SOURCE_CODE="$PWD" pipelinecomponents/hadolint hadolint Dockerfile
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+
+# Testing Jobs
+unit_tests:
+  stage: test
+  image: python:3.9
+  script:
+    - pip install -r requirements.txt
+    - pytest tests/unit
+  coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
+  artifacts:
+    reports:
+      junit: test-results.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+integration_tests:
+  stage: test
+  image: python:3.9
+  services:
+    - postgres:latest
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: test_user
+    POSTGRES_PASSWORD: test_password
+  script:
+    - pip install -r requirements.txt
+    - pytest tests/integration
+
+# Security Jobs
+sast:
+  stage: security
+  extends: .sast
+  variables:
+    SAST_EXCLUDED_PATHS: "tests/, docs/"
+
+dependency_scanning:
+  stage: security
+  extends: .dependency_scanning
+
+secret_detection:
+  stage: security
+  extends: .secret-detection
+
+# Build Jobs
+build_image:
+  stage: build
+  image: docker:stable
+  services:
+    - docker:dind
+  script:
+    - docker build -t ${DOCKER_REGISTRY}/${CI_PROJECT_PATH}:${APP_VERSION} .
+    - docker push ${DOCKER_REGISTRY}/${CI_PROJECT_PATH}:${APP_VERSION}
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_TAG
+
+# Deployment Jobs
+.deploy_template: &deploy_definition
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config use-context ${KUBE_CONTEXT}
+    - kubectl set image deployment/${CI_PROJECT_NAME} app=${DOCKER_REGISTRY}/${CI_PROJECT_PATH}:${APP_VERSION} -n ${KUBERNETES_NAMESPACE}
+    - kubectl rollout status deployment/${CI_PROJECT_NAME} -n ${KUBERNETES_NAMESPACE}
+
+deploy_staging:
+  <<: *deploy_definition
+  stage: deploy
+  environment:
+    name: staging
+    url: https://staging.example.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+deploy_production:
+  <<: *deploy_definition
+  stage: deploy
+  environment:
+    name: production
+    url: https://production.example.com
+  rules:
+    - if: $CI_COMMIT_TAG
+  when: manual
+
+# Monitoring Jobs
+performance:
+  stage: monitor
+  image: docker:stable
+  services:
+    - docker:dind
+  script:
+    - docker run --rm registry.gitlab.com/gitlab-org/gitlab-runner:alpine-v${CI_RUNNER_VERSION} gitlab-runner-helper health-check
+  rules:
+    - if: $CI_ENVIRONMENT_NAME == "production"
+
+# Cleanup Jobs
+cleanup_review:
+  stage: cleanup
+  image: bitnami/kubectl:latest
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - kubectl delete namespace ${KUBERNETES_NAMESPACE}
+  environment:
+    name: review/${CI_COMMIT_REF_NAME}
+    action: stop
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+      when: manual
+      allow_failure: true

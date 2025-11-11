@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Lambda Function Template'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: Development
+    Description: Environment name
+
+  FunctionName:
+    Type: String
+    Description: Name of the Lambda function
+
+  Runtime:
+    Type: String
+    Default: python3.9
+    AllowedValues:
+      - nodejs18.x
+      - python3.9
+      - java11
+      - dotnet6
+      - go1.x
+    Description: Lambda function runtime
+
+  MemorySize:
+    Type: Number
+    Default: 128
+    AllowedValues: [128, 256, 512, 1024, 2048]
+    Description: Memory size for Lambda function
+
+  Timeout:
+    Type: Number
+    Default: 30
+    MinValue: 3
+    MaxValue: 900
+    Description: Timeout in seconds
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref FunctionName
+      Runtime: !Ref Runtime
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              print('Received event:', event)
+              return {
+                  'statusCode': 200,
+                  'body': 'Hello from Lambda!'
+              }
+      MemorySize: !Ref MemorySize
+      Timeout: !Ref Timeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${FunctionName}
+      RetentionInDays: 30
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+
+Outputs:
+  LambdaFunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt LambdaFunction.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-${FunctionName}-Arn
+
+  LambdaRoleArn:
+    Description: Lambda Execution Role ARN
+    Value: !GetAtt LambdaExecutionRole.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-${FunctionName}-RoleArn

@@ -1,0 +1,50 @@
+---
+# CloudStack Resource Allocation Configuration
+service_offerings:
+  small:
+    cpu: 1
+    memory: 2048
+    storage: 20
+    network:
+      bandwidth: 1000
+  medium:
+    cpu: 2
+    memory: 4096
+    storage: 50
+    network:
+      bandwidth: 2000
+  large:
+    cpu: 4
+    memory: 8192
+    storage: 100
+    network:
+      bandwidth: 4000
+
+disk_offerings:
+  standard:
+    type: "magnetic"
+    min_size: 10
+    max_size: 500
+    iops: 100
+  ssd:
+    type: "ssd"
+    min_size: 10
+    max_size: 1000
+    iops: 3000
+
+network_offerings:
+  basic:
+    type: "shared"
+    services:
+      - dhcp
+      - dns
+    bandwidth: 1000
+  advanced:
+    type: "isolated"
+    services:
+      - dhcp
+      - dns
+      - firewall
+      - lb
+      - vpn
+    bandwidth: 10000

@@ -1,0 +1,42 @@
+platform: ubuntu
+backup:
+  directories:
+    - /etc
+    - /home
+    - /var/www
+    - /var/log
+  exclude:
+    - "*.tmp"
+    - "*.cache"
+    - "/var/log/journal"
+  
+retention:
+  daily: 7
+  weekly: 4
+  monthly: 3
+
+compression:
+  enabled: true
+  type: gzip
+  level: 6
+
+encryption:
+  enabled: true
+  type: gpg
+  key_id: "${GPG_KEY_ID}"
+
+storage:
+  type: s3
+  bucket: "${BACKUP_BUCKET}"
+  prefix: "ubuntu-backups"
+  region: "us-east-1"
+
+notification:
+  enabled: true
+  type: email
+  recipients:
+    - "${ADMIN_EMAIL}"
+
+schedule:
+  full_backup: "0 0 * * 0"  # Weekly on Sunday
+  incremental: "0 0 * * 1-6"  # Daily except Sunday

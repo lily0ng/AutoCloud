@@ -1,0 +1,59 @@
+apiVersion: 1
+
+datasources:
+  # Red Hat Enterprise Linux (RHEL) Monitoring
+  - name: RHEL_Metrics
+    type: prometheus
+    access: proxy
+    url: http://rhel-exporter:9100
+    jsonData:
+      timeInterval: 10s
+      queryTimeout: "60s"
+
+  # Debian Server Monitoring
+  - name: Debian_Metrics
+    type: prometheus
+    access: proxy
+    url: http://debian-exporter:9100
+    jsonData:
+      timeInterval: 10s
+
+  # FreeBSD Monitoring
+  - name: FreeBSD_Metrics
+    type: prometheus
+    access: proxy
+    url: http://freebsd-exporter:9100
+    jsonData:
+      timeInterval: 15s
+
+  # Oracle Linux Monitoring
+  - name: OracleLinux_Metrics
+    type: prometheus
+    access: proxy
+    url: http://oracle-exporter:9100
+    jsonData:
+      timeInterval: 10s
+
+  # SUSE Linux Monitoring
+  - name: SUSE_Metrics
+    type: prometheus
+    access: proxy
+    url: http://suse-exporter:9100
+    jsonData:
+      timeInterval: 10s
+
+  # Fedora Monitoring
+  - name: Fedora_Metrics
+    type: prometheus
+    access: proxy
+    url: http://fedora-exporter:9100
+    jsonData:
+      timeInterval: 10s
+
+  # Alpine Linux Monitoring
+  - name: Alpine_Metrics
+    type: prometheus
+    access: proxy
+    url: http://alpine-exporter:9100
+    jsonData:
+      timeInterval: 10s

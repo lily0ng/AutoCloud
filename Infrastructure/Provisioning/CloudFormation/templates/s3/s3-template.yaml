@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'S3 Bucket with various configurations'
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name for the S3 bucket
+    
+  EnvironmentName:
+    Type: String
+    Description: Environment name
+    Default: Development
+
+  EnableVersioning:
+    Type: String
+    Description: Enable versioning on the bucket
+    Default: true
+    AllowedValues: [true, false]
+
+  EnableEncryption:
+    Type: String
+    Description: Enable server-side encryption
+    Default: true
+    AllowedValues: [true, false]
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      VersioningConfiguration:
+        Status: !If [EnableVersioning, Enabled, Suspended]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 90
+          - Id: TransitionToGlacier
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 180
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: 
+              - !Sub arn:aws:s3:::${S3Bucket}/*
+              - !Sub arn:aws:s3:::${S3Bucket}
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+Outputs:
+  BucketName:
+    Description: Name of the created bucket
+    Value: !Ref S3Bucket
+    Export:
+      Name: !Sub ${EnvironmentName}-BucketName
+
+  BucketARN:
+    Description: ARN of the created bucket
+    Value: !GetAtt S3Bucket.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-BucketARN

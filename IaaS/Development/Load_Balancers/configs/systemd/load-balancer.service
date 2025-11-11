@@ -1,0 +1,15 @@
+[Unit]
+Description=Load Balancer Service
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/sbin/haproxy -f /etc/haproxy/haproxy.cfg
+ExecReload=/bin/kill -USR2 $MAINPID
+Restart=always
+RestartSec=5
+LimitNOFILE=1048576
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

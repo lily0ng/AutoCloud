@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ${NAMESPACE}-quota
+  namespace: ${NAMESPACE}
+  labels:
+    environment: ${ENVIRONMENT}
+spec:
+  hard:
+    requests.cpu: "${CPU_REQUEST_LIMIT}"
+    requests.memory: ${MEMORY_REQUEST_LIMIT}
+    limits.cpu: "${CPU_LIMIT}"
+    limits.memory: ${MEMORY_LIMIT}
+    persistentvolumeclaims: "${PVC_COUNT}"
+    requests.storage: ${STORAGE_LIMIT}
+    pods: "${MAX_PODS}"
+    services: "${MAX_SERVICES}"
+    services.loadbalancers: "${MAX_LOADBALANCERS}"
+    services.nodeports: "${MAX_NODEPORTS}"
+    configmaps: "${MAX_CONFIGMAPS}"
+    secrets: "${MAX_SECRETS}"
+  scopeSelector:
+    matchExpressions:
+    - operator: In
+      scopeName: PriorityClass
+      values: ["high", "medium"]
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ${NAMESPACE}-limit-range
+  namespace: ${NAMESPACE}
+spec:
+  limits:
+  - max:
+      cpu: "${POD_MAX_CPU}"
+      memory: ${POD_MAX_MEMORY}
+    min:
+      cpu: "${POD_MIN_CPU}"
+      memory: ${POD_MIN_MEMORY}
+    default:
+      cpu: "${POD_DEFAULT_CPU}"
+      memory: ${POD_DEFAULT_MEMORY}
+    defaultRequest:
+      cpu: "${POD_DEFAULT_REQUEST_CPU}"
+      memory: ${POD_DEFAULT_REQUEST_MEMORY}
+    type: Container

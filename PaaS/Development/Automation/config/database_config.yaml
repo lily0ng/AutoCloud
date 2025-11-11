@@ -1,0 +1,41 @@
+databases:
+  postgres:
+    default:
+      host: localhost
+      port: 5432
+      max_connections: 100
+      pool_size: 20
+      ssl_mode: require
+      timeout_seconds: 30
+      retry_attempts: 3
+      backup:
+        retention_days: 30
+        schedule: "0 2 * * *"
+        storage_type: s3
+
+  mysql:
+    default:
+      host: localhost
+      port: 3306
+      max_connections: 150
+      connection_timeout: 30
+      pool_size: 25
+      ssl_enabled: true
+      backup:
+        retention_days: 30
+        schedule: "0 3 * * *"
+        storage_type: azure_blob
+
+  mongodb:
+    default:
+      host: localhost
+      port: 27017
+      max_pool_size: 50
+      min_pool_size: 10
+      max_idle_time_ms: 30000
+      connect_timeout_ms: 20000
+      replica_set: rs0
+      backup:
+        retention_days: 30
+        schedule: "0 4 * * *"
+        storage_type: gcs

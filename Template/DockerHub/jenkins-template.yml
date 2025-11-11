@@ -1,0 +1,21 @@
+---
+# Jenkins CI/CD Template
+version: '3.8'
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    restart: always
+    ports: ["8080:8080", "50000:50000"]
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+    volumes: [jenkins_home:/var/jenkins_home, /var/run/docker.sock:/var/run/docker.sock]
+  jenkins-agent:
+    image: jenkins/inbound-agent:latest
+    restart: always
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_SECRET: ${AGENT_SECRET}
+      JENKINS_AGENT_NAME: agent1
+    depends_on: [jenkins]
+volumes:
+  jenkins_home:

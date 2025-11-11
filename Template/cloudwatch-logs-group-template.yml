@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudWatch Logs Group Template'
+
+Parameters:
+  LogGroupName:
+    Type: String
+    Default: /aws/my-application
+  RetentionInDays:
+    Type: Number
+    Default: 7
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+
+Resources:
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      RetentionInDays: !Ref RetentionInDays
+
+Outputs:
+  LogGroupArn:
+    Value: !GetAtt LogGroup.Arn

@@ -1,0 +1,107 @@
+---
+# Web Server Cluster Template
+apiVersion: cluster.autocloud.io/v1
+kind: WebServerCluster
+metadata:
+  name: web-cluster
+  namespace: web-system
+  labels:
+    app: web-cluster
+    tier: frontend
+spec:
+  # Cluster Configuration
+  cluster:
+    size: 3
+    minSize: 2
+    maxSize: 10
+    autoScaling:
+      enabled: true
+      targetCPU: 70
+      targetMemory: 80
+      scaleUpCooldown: 300
+      scaleDownCooldown: 600
+  
+  # Server Configuration
+  servers:
+    type: nginx  # nginx, apache, iis
+    version: "1.24"
+    image: nginx:1.24-alpine
+    
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+    
+    # Configuration
+    config:
+      workerProcesses: auto
+      workerConnections: 4096
+      keepaliveTimeout: 65
+      clientMaxBodySize: 20M
+      
+    # SSL/TLS
+    ssl:
+      enabled: true
+      certificateSecret: web-tls-cert
+      protocols:
+        - TLSv1.2
+        - TLSv1.3
+  
+  # Load Balancing
+  loadBalancer:
+    type: application  # application, network
+    algorithm: round-robin  # round-robin, least-conn, ip-hash
+    healthCheck:
+      enabled: true
+      path: /health
+      interval: 10
+      timeout: 5
+      healthyThreshold: 2
+      unhealthyThreshold: 3
+    
+    stickySessions:
+      enabled: true
+      cookieName: SERVERID
+      cookieDuration: 3600
+  
+  # Session Management
+  session:
+    type: redis
+    redis:
+      host: redis-cluster
+      port: 6379
+      database: 0
+      password:
+        secretName: redis-password
+        secretKey: password
+  
+  # Monitoring
+  monitoring:
+    enabled: true
+    metrics:
+      - http_requests_total
+      - http_request_duration_seconds
+      - http_response_size_bytes
+      - active_connections
+    alerts:
+      - name: high-error-rate
+        condition: error_rate > 5
+        severity: warning
+      - name: server-down
+        condition: server_status == down
+        severity: critical
+  
+  # High Availability
+  highAvailability:
+    enabled: true
+    multiAZ: true
+    zones:
+      - us-east-1a
+      - us-east-1b
+      - us-east-1c
+    failover:
+      automatic: true
+      timeout: 30

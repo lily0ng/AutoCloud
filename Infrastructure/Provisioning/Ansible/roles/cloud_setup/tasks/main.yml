@@ -1,0 +1,33 @@
+---
+- name: Install cloud-specific packages
+  apt:
+    name:
+      - python3-pip
+      - python3-boto3
+      - awscli
+    state: present
+
+- name: Install Azure CLI
+  shell: |
+    curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+  args:
+    creates: /usr/bin/az
+
+- name: Install Google Cloud SDK
+  shell: |
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+    apt-get update && apt-get install google-cloud-sdk -y
+  args:
+    creates: /usr/bin/gcloud
+
+- name: Configure cloud provider credentials
+  template:
+    src: "templates/{{ item }}.j2"
+    dest: "/root/.{{ item }}"
+    mode: '0600'
+  with_items:
+    - aws_config
+    - aws_credentials
+    - azure.json
+    - gcloud.json

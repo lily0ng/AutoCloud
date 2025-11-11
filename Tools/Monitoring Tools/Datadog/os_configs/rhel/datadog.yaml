@@ -1,0 +1,66 @@
+# RHEL-specific Datadog Agent Configuration
+api_key: "<YOUR_DATADOG_API_KEY>"
+site: "datadoghq.com"
+
+# RHEL System Monitoring
+logs_enabled: true
+logs_config:
+  processing_rules:
+    - type: mask_sequences
+      name: "mask_credentials"
+      pattern: "(password|secret|key)(['\"]:\s*['\"])\w+"
+      replacement: "\\1\\2*****"
+
+# RHEL-specific log collection
+logs:
+  - type: file
+    path: /var/log/messages
+    service: rhel-system
+    source: syslog
+  - type: file
+    path: /var/log/secure
+    service: rhel-auth
+    source: auth
+  - type: file
+    path: /var/log/dnf.log
+    service: rhel-packages
+    source: dnf
+
+# SELinux configuration
+selinux_config:
+  enabled: true
+  context: system_u:system_r:datadog_agent_t:s0
+
+# Process monitoring with RHEL specifics
+process_config:
+  enabled: true
+  intervals:
+    process_realtime: 10
+    process: 30
+
+# RHEL-specific checks
+auto_conf_images: true
+container_include:
+  - "image:rhel"
+  - "image:redhat/*"
+
+# System Probe for RHEL
+system_probe_config:
+  enabled: true
+  sysprobe_socket: /sys/kernel/debug/tracing
+  enable_tcp_monitoring: true
+  enable_udp_monitoring: true
+
+# RHEL-specific integrations
+integrations:
+  systemd:
+    init_config:
+    instances:
+      - unit_names:
+          - sshd.service
+          - firewalld.service
+          - NetworkManager.service
+  subscription_manager:
+    init_config:
+    instances:
+      - 

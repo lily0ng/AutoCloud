@@ -1,0 +1,155 @@
+---
+# Container Backup Template
+# Docker and Kubernetes container backup configuration
+
+apiVersion: backup.autocloud.io/v1
+kind: ContainerBackup
+metadata:
+  name: container-backup
+  namespace: backup-system
+  labels:
+    app: container-backup
+    backup-type: container
+    environment: production
+
+spec:
+  # Container Platform
+  platform:
+    type: kubernetes  # kubernetes, docker, containerd
+    
+    # Kubernetes configuration
+    kubernetes:
+      kubeconfig: /etc/kubernetes/admin.conf
+      namespaces:
+        - production
+        - staging
+      includeClusterResources: true
+      
+    # Docker configuration
+    docker:
+      host: unix:///var/run/docker.sock
+      containers:
+        - app-container
+        - db-container
+        - cache-container
+
+  # Backup Scope
+  scope:
+    # Persistent volumes
+    volumes:
+      - name: app-data
+        storageClass: standard
+        accessMode: ReadWriteOnce
+        
+      - name: db-data
+        storageClass: fast-ssd
+        accessMode: ReadWriteOnce
+        
+    # ConfigMaps and Secrets
+    configMaps:
+      - app-config
+      - nginx-config
+      
+    secrets:
+      - app-secrets
+      - db-credentials
+      - tls-certs
+      
+    # Kubernetes resources
+    resources:
+      - deployments
+      - statefulsets
+      - services
+      - ingresses
+      - persistentvolumeclaims
+
+  # Backup Schedule
+  schedule:
+    cron: "0 2 * * *"
+    timezone: "UTC"
+    enabled: true
+
+  # Destination
+  destination:
+    type: s3
+    bucket: container-backups
+    region: us-east-1
+    prefix: "container-backup/${NAMESPACE}/${DATE}/"
+    encryption:
+      enabled: true
+      type: SSE-KMS
+
+  # Backup Options
+  options:
+    # Volume snapshots
+    volumeSnapshots:
+      enabled: true
+      snapshotClass: csi-snapclass
+      
+    # Application consistency
+    applicationConsistent: true
+    preHooks:
+      - container: app
+        command: ["/bin/sh", "-c", "app-quiesce"]
+    postHooks:
+      - container: app
+        command: ["/bin/sh", "-c", "app-resume"]
+        
+    # Compression
+    compression:
+      enabled: true
+      algorithm: gzip
+      
+    # Encryption
+    encryption:
+      enabled: true
+      algorithm: AES-256-GCM
+      
+    # Resource filtering
+    resourceFilter:
+      includedNamespaces:
+        - production
+        - staging
+      excludedResources:
+        - events
+        - pods
+
+  # Retention Policy
+  retention:
+    daily: 7
+    weekly: 4
+    monthly: 6
+
+  # Velero Integration
+  velero:
+    enabled: true
+    version: v1.12.0
+    plugins:
+      - velero/velero-plugin-for-aws:v1.8.0
+      - velero/velero-plugin-for-csi:v0.6.0
+    defaultVolumesToRestic: false
+    useVolumeSnapshots: true
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    metrics:
+      - backup_size_bytes
+      - backup_duration_seconds
+      - volumes_backed_up
+      - resources_backed_up
+    alerts:
+      - name: backup-failed
+        severity: critical
+      - name: volume-snapshot-failed
+        severity: critical
+
+  # Recovery
+  recovery:
+    restoreNamespace: backup-restore
+    restorePVs: true
+    preserveNodePorts: false
+    testing:
+      enabled: true
+      schedule: "0 8 * * 0"
+      testNamespace: backup-test

@@ -1,0 +1,41 @@
+language: python
+python:
+  - "3.8"
+  - "3.9"
+  - "3.10"
+
+# Cache pip dependencies to speed up builds
+cache: pip
+
+# Install dependencies
+before_install:
+  - python -m pip install --upgrade pip
+  - pip install flake8 pytest coverage
+
+install:
+  - pip install -r requirements.txt
+
+# Run tests and linting
+before_script:
+  - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+  - flake8 . --count --exit-zero --max-complexity=10 --statistics
+
+script:
+  - pytest tests/ --cov=app
+  - coverage report
+
+# Deploy section (example for Heroku)
+deploy:
+  provider: heroku
+  api_key:
+    secure: "YOUR-ENCRYPTED-API-KEY"
+  app: your-app-name
+  on:
+    branch: main
+
+notifications:
+  email:
+    recipients:
+      - your.email@example.com
+    on_success: change
+    on_failure: always

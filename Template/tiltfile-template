@@ -1,0 +1,15 @@
+# Tilt Configuration Template
+k8s_yaml('k8s/deployment.yml')
+k8s_yaml('k8s/service.yml')
+
+docker_build('myapp', '.',
+  live_update=[
+    sync('.', '/app'),
+    run('npm install', trigger=['package.json']),
+  ]
+)
+
+k8s_resource('myapp',
+  port_forwards=8080,
+  resource_deps=['postgres']
+)

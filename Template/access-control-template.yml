@@ -1,0 +1,218 @@
+---
+# Access Control Template
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-service-account
+  namespace: production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-role
+  namespace: production
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-role-binding
+  namespace: production
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: app-role
+subjects:
+- kind: ServiceAccount
+  name: app-service-account
+  namespace: production
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opa-policy
+  namespace: security
+data:
+  policy.rego: |
+    package kubernetes.admission
+    
+    deny[msg] {
+      input.request.kind.kind == "Pod"
+      not input.request.object.spec.securityContext.runAsNonRoot
+      msg := "Pods must run as non-root user"
+    }
+    
+    deny[msg] {
+      input.request.kind.kind == "Pod"
+      container := input.request.object.spec.containers[_]
+      container.securityContext.privileged
+      msg := sprintf("Container %v is privileged", [container.name])
+    }
+    
+    deny[msg] {
+      input.request.kind.kind == "Pod"
+      container := input.request.object.spec.containers[_]
+      not container.resources.limits.cpu
+      msg := sprintf("Container %v has no CPU limit", [container.name])
+    }
+    
+    deny[msg] {
+      input.request.kind.kind == "Pod"
+      container := input.request.object.spec.containers[_]
+      not container.resources.limits.memory
+      msg := sprintf("Container %v has no memory limit", [container.name])
+    }
+    
+    deny[msg] {
+      input.request.kind.kind == "Service"
+      input.request.object.spec.type == "LoadBalancer"
+      not input.request.object.metadata.annotations["service.beta.kubernetes.io/aws-load-balancer-internal"]
+      msg := "LoadBalancer services must be internal"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  namespace: security
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+    spec:
+      containers:
+      - name: opa
+        image: openpolicyagent/opa:latest
+        args:
+        - "run"
+        - "--server"
+        - "--addr=0.0.0.0:8181"
+        - "/policies"
+        ports:
+        - containerPort: 8181
+        volumeMounts:
+        - name: policies
+          mountPath: /policies
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      volumes:
+      - name: policies
+        configMap:
+          name: opa-policy
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kyverno-policies
+  namespace: security
+data:
+  require-labels.yaml: |
+    apiVersion: kyverno.io/v1
+    kind: ClusterPolicy
+    metadata:
+      name: require-labels
+    spec:
+      validationFailureAction: enforce
+      rules:
+      - name: check-for-labels
+        match:
+          resources:
+            kinds:
+            - Pod
+        validate:
+          message: "Labels 'app' and 'env' are required"
+          pattern:
+            metadata:
+              labels:
+                app: "?*"
+                env: "?*"
+  
+  disallow-latest-tag.yaml: |
+    apiVersion: kyverno.io/v1
+    kind: ClusterPolicy
+    metadata:
+      name: disallow-latest-tag
+    spec:
+      validationFailureAction: enforce
+      rules:
+      - name: require-image-tag
+        match:
+          resources:
+            kinds:
+            - Pod
+        validate:
+          message: "Using 'latest' image tag is not allowed"
+          pattern:
+            spec:
+              containers:
+              - image: "!*:latest"
+  
+  require-resource-limits.yaml: |
+    apiVersion: kyverno.io/v1
+    kind: ClusterPolicy
+    metadata:
+      name: require-resource-limits
+    spec:
+      validationFailureAction: enforce
+      rules:
+      - name: check-resource-limits
+        match:
+          resources:
+            kinds:
+            - Pod
+        validate:
+          message: "CPU and memory limits are required"
+          pattern:
+            spec:
+              containers:
+              - resources:
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-policy
+  namespace: security
+data:
+  audit-policy.yaml: |
+    apiVersion: audit.k8s.io/v1
+    kind: Policy
+    rules:
+    - level: Metadata
+      resources:
+      - group: ""
+        resources: ["secrets", "configmaps"]
+    - level: RequestResponse
+      resources:
+      - group: ""
+        resources: ["pods/exec", "pods/portforward", "pods/proxy"]
+    - level: Request
+      verbs: ["create", "update", "patch", "delete"]
+      resources:
+      - group: ""
+      - group: "apps"
+      - group: "batch"
+    - level: Metadata
+      omitStages:
+      - RequestReceived

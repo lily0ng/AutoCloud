@@ -1,0 +1,31 @@
+{
+  "name": "RancherOS",
+  "version": "1.5.8",
+  "type": "container-os",
+  "distribution": "rancher",
+  "architecture": "amd64",
+  "iso_url": "https://releases.rancher.com/os/v1.5.8/rancheros.iso",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "1024",
+    "min_disk": "8",
+    "min_cpu": "1"
+  },
+  "cloud_config": {
+    "hostname": "rancher",
+    "rancher": {
+      "network": {
+        "interfaces": {
+          "eth0": {
+            "dhcp": true
+          }
+        }
+      }
+    },
+    "ssh_authorized_keys": ["ssh-rsa AAAAB3..."],
+    "write_files": [],
+    "runcmd": [
+      "ros install -d /dev/sda -f"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+load_balancers:
+  application_lb:
+    protocol: http
+    port: 80
+    health_check:
+      path: /health
+      interval: 30
+      timeout: 5
+      healthy_threshold: 2
+      unhealthy_threshold: 3
+    ssl_policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    idle_timeout: 60
+    access_logs:
+      enabled: true
+      retention_days: 30
+    
+  network_lb:
+    protocol: tcp
+    port: 443
+    health_check:
+      protocol: tcp
+      port: 443
+      interval: 30
+      timeout: 10
+      threshold: 3
+    cross_zone_enabled: true
+    
+  session_stickiness:
+    enabled: true
+    type: application_cookie
+    cookie_duration: 86400
+    
+  rules:
+    - name: "default_rule"
+      priority: 1
+      conditions:
+        path_pattern: "/*"
+      actions:
+        target_group: default_target
+    - name: "api_rule"
+      priority: 2
+      conditions:
+        path_pattern: "/api/*"
+      actions:
+        target_group: api_target

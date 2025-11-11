@@ -1,0 +1,20 @@
+apiVersion: skaffold/v4beta6
+kind: Config
+metadata:
+  name: myapp
+build:
+  artifacts:
+    - image: myapp
+      docker:
+        dockerfile: Dockerfile
+  local:
+    push: false
+deploy:
+  kubectl:
+    manifests:
+      - k8s/*.yml
+portForward:
+  - resourceType: service
+    resourceName: myapp
+    port: 8080
+    localPort: 8080

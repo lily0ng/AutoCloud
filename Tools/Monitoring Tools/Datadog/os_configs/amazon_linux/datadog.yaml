@@ -1,0 +1,69 @@
+# Amazon Linux-specific Datadog Agent Configuration
+api_key: "<YOUR_DATADOG_API_KEY>"
+site: "datadoghq.com"
+
+# Amazon Linux System Monitoring
+logs_enabled: true
+logs_config:
+  processing_rules:
+    - type: mask_sequences
+      name: "mask_credentials"
+      pattern: "(password|secret|key)(['\"]:\s*['\"])\w+"
+      replacement: "\\1\\2*****"
+
+# Amazon Linux-specific log collection
+logs:
+  - type: file
+    path: /var/log/messages
+    service: amazonlinux-system
+    source: syslog
+  - type: file
+    path: /var/log/secure
+    service: amazonlinux-auth
+    source: auth
+  - type: file
+    path: /var/log/yum.log
+    service: amazonlinux-packages
+    source: yum
+  - type: file
+    path: /var/log/cloud-init.log
+    service: amazonlinux-cloud-init
+    source: cloud-init
+
+# AWS-specific monitoring
+cloud_provider_metadata:
+  - "aws"
+
+# Process monitoring
+process_config:
+  enabled: true
+  intervals:
+    process_realtime: 10
+    process: 30
+
+# Amazon Linux-specific checks
+auto_conf_images: true
+container_include:
+  - "image:amazonlinux"
+
+# System Probe for Amazon Linux
+system_probe_config:
+  enabled: true
+  sysprobe_socket: /sys/kernel/debug/tracing
+  enable_tcp_monitoring: true
+  enable_udp_monitoring: true
+
+# Amazon Linux-specific integrations
+integrations:
+  amazon_eks:
+    init_config:
+    instances:
+      - 
+  ec2:
+    init_config:
+    instances:
+      - 
+  cloudwatch:
+    init_config:
+    instances:
+      - 

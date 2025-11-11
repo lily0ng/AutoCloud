@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon DynamoDB Table Template'
+
+Parameters:
+  TableName:
+    Type: String
+    Default: MyDynamoDBTable
+
+  BillingMode:
+    Type: String
+    Default: PAY_PER_REQUEST
+    AllowedValues:
+      - PAY_PER_REQUEST
+      - PROVISIONED
+
+  ReadCapacityUnits:
+    Type: Number
+    Default: 5
+
+  WriteCapacityUnits:
+    Type: Number
+    Default: 5
+
+Resources:
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: !Ref BillingMode
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: N
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      ProvisionedThroughput: !If
+        - IsProvisioned
+        - ReadCapacityUnits: !Ref ReadCapacityUnits
+          WriteCapacityUnits: !Ref WriteCapacityUnits
+        - !Ref AWS::NoValue
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+      GlobalSecondaryIndexes:
+        - IndexName: TimestampIndex
+          KeySchema:
+            - AttributeName: timestamp
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput: !If
+            - IsProvisioned
+            - ReadCapacityUnits: !Ref ReadCapacityUnits
+              WriteCapacityUnits: !Ref WriteCapacityUnits
+            - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Ref TableName
+
+Conditions:
+  IsProvisioned: !Equals [!Ref BillingMode, PROVISIONED]
+
+Outputs:
+  TableName:
+    Value: !Ref DynamoDBTable
+  TableArn:
+    Value: !GetAtt DynamoDBTable.Arn
+  StreamArn:
+    Value: !GetAtt DynamoDBTable.StreamArn

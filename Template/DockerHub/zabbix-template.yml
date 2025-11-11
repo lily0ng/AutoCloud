@@ -1,0 +1,36 @@
+---
+# Zabbix Monitoring Template
+version: '3.8'
+services:
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:latest
+    restart: always
+    ports: ["10051:10051"]
+    environment:
+      DB_SERVER_HOST: postgres
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-zabbixpass}
+    depends_on: [postgres]
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:latest
+    restart: always
+    ports: ["80:8080"]
+    environment:
+      DB_SERVER_HOST: postgres
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-zabbixpass}
+      ZBX_SERVER_HOST: zabbix-server
+      PHP_TZ: UTC
+    depends_on: [postgres, zabbix-server]
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-zabbixpass}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+volumes:
+  postgres_data:

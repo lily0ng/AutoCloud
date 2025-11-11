@@ -1,0 +1,39 @@
+backup:
+  database:
+    schedule: "0 0 * * *"  # Daily at midnight
+    retention_period: 30d
+    type: full
+    storage:
+      type: s3
+      bucket: app-backups
+      path: /database
+
+  files:
+    schedule: "0 0 * * 0"  # Weekly on Sunday
+    retention_period: 90d
+    includes:
+      - /app/uploads
+      - /app/config
+    excludes:
+      - "*.tmp"
+      - "*.log"
+    storage:
+      type: s3
+      bucket: app-backups
+      path: /files
+
+  monitoring:
+    notify_on:
+      - failure
+      - success
+    channels:
+      - email: admin@example.com
+      - slack: "#backups"
+
+  restore:
+    verification:
+      enabled: true
+      schedule: "0 1 * * *"  # Daily at 1 AM
+    automated:
+      enabled: true
+      on_failure: true

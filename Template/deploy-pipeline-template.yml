@@ -1,0 +1,123 @@
+---
+# Deploy Pipeline Template
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: deploy-pipeline
+  namespace: cicd
+spec:
+  params:
+    - name: image-name
+      type: string
+    - name: image-tag
+      type: string
+    - name: deployment-name
+      type: string
+    - name: namespace
+      type: string
+      default: default
+    - name: environment
+      type: string
+  
+  workspaces:
+    - name: kubeconfig
+  
+  tasks:
+    - name: validate-deployment
+      taskRef:
+        name: kubectl
+      workspaces:
+        - name: kubeconfig
+          workspace: kubeconfig
+      params:
+        - name: SCRIPT
+          value: |
+            kubectl get deployment $(params.deployment-name) -n $(params.namespace)
+    
+    - name: update-image
+      runAfter: [validate-deployment]
+      taskRef:
+        name: kubectl
+      workspaces:
+        - name: kubeconfig
+          workspace: kubeconfig
+      params:
+        - name: SCRIPT
+          value: |
+            kubectl set image deployment/$(params.deployment-name) \
+              $(params.deployment-name)=$(params.image-name):$(params.image-tag) \
+              -n $(params.namespace)
+    
+    - name: wait-for-rollout
+      runAfter: [update-image]
+      taskRef:
+        name: kubectl
+      workspaces:
+        - name: kubeconfig
+          workspace: kubeconfig
+      params:
+        - name: SCRIPT
+          value: |
+            kubectl rollout status deployment/$(params.deployment-name) \
+              -n $(params.namespace) \
+              --timeout=5m
+    
+    - name: verify-deployment
+      runAfter: [wait-for-rollout]
+      taskRef:
+        name: kubectl
+      workspaces:
+        - name: kubeconfig
+          workspace: kubeconfig
+      params:
+        - name: SCRIPT
+          value: |
+            kubectl get pods -n $(params.namespace) -l app=$(params.deployment-name)
+            kubectl describe deployment $(params.deployment-name) -n $(params.namespace)
+    
+    - name: smoke-test
+      runAfter: [verify-deployment]
+      taskRef:
+        name: smoke-test
+      params:
+        - name: service-url
+          value: "http://$(params.deployment-name).$(params.namespace).svc.cluster.local"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: kubectl
+  namespace: cicd
+spec:
+  params:
+    - name: SCRIPT
+      type: string
+  workspaces:
+    - name: kubeconfig
+  steps:
+    - name: kubectl
+      image: bitnami/kubectl:latest
+      script: |
+        #!/bin/sh
+        set -e
+        export KUBECONFIG=$(workspaces.kubeconfig.path)/config
+        $(params.SCRIPT)
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: smoke-test
+  namespace: cicd
+spec:
+  params:
+    - name: service-url
+      type: string
+  steps:
+    - name: test
+      image: curlimages/curl:latest
+      script: |
+        #!/bin/sh
+        set -e
+        echo "Running smoke test against $(params.service-url)"
+        curl -f $(params.service-url)/health || exit 1
+        echo "Smoke test passed!"

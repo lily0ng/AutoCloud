@@ -1,0 +1,27 @@
+Resources:
+  CloudWatchLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: "/ec2/logs"
+      RetentionInDays: 7
+
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro"
+      ImageId: "ami-0abcd12345example"
+      KeyName: "my-key-pair"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y awslogs
+          echo '
+          [general]
+          state_file = /var/lib/awslogs/agent-state
+
+          [/var/log/messages]
+          log_group_name = /ec2/logs
+          log_stream_name = {instance_id}/var/log/messages
+          file = /var/log/messages
+          ' > /etc/awslogs/awslogs.conf
+          service awslogs start

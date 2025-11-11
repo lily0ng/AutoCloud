@@ -1,0 +1,32 @@
+backup:
+  schedule:
+    full_backup:
+      frequency: daily
+      retention_days: 30
+      time: "00:00"
+    incremental_backup:
+      frequency: hourly
+      retention_days: 7
+      
+  storage:
+    type: object_storage
+    providers:
+      - aws_s3
+      - azure_blob
+      - gcp_storage
+    
+  encryption:
+    enabled: true
+    algorithm: AES-256
+    key_rotation: 90
+
+disaster_recovery:
+  rpo_hours: 1
+  rto_hours: 4
+  failover_regions:
+    aws:
+      - us-west-2
+    azure:
+      - westeurope
+    gcp:
+      - us-east1

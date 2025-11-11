@@ -1,0 +1,30 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ${APP_NAME}-pdb
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP_NAME}
+    environment: ${ENVIRONMENT}
+spec:
+  minAvailable: ${MIN_AVAILABLE}
+  # Alternative: maxUnavailable: ${MAX_UNAVAILABLE}
+  selector:
+    matchLabels:
+      app: ${APP_NAME}
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ${APP_NAME}-pdb-percentage
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP_NAME}
+    environment: ${ENVIRONMENT}
+spec:
+  minAvailable: ${MIN_AVAILABLE_PERCENTAGE}%
+  selector:
+    matchLabels:
+      app: ${APP_NAME}
+      tier: backend

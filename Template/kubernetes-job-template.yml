@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: database-migration
+spec:
+  template:
+    spec:
+      containers:
+      - name: migration
+        image: migration-tool:latest
+        command: ["./migrate"]
+        args: ["up"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: url
+      restartPolicy: OnFailure
+  backoffLimit: 4
+  activeDeadlineSeconds: 600

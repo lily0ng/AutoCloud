@@ -1,0 +1,54 @@
+backup_configuration:
+  global:
+    retention:
+      daily: 7
+      weekly: 4
+      monthly: 12
+    compression: true
+    encryption: true
+    encryption_key: "vault://backup/encryption_key"
+
+  storage_locations:
+    primary:
+      type: "nfs"
+      server: "nas.local"
+      path: "/volume1/backups"
+      mount_options: "rw,sync"
+    secondary:
+      type: "s3"
+      bucket: "company-backups"
+      region: "us-east-1"
+      storage_class: "STANDARD_IA"
+
+  backup_jobs:
+    vmware_vms:
+      schedule: "0 1 * * *"  # Daily at 1 AM
+      type: "vmware_snapshot"
+      targets:
+        - "production/*"
+        - "!test/*"
+      options:
+        quiesce: true
+        memory: false
+        
+    mysql_databases:
+      schedule: "0 2 * * *"  # Daily at 2 AM
+      type: "mysql"
+      targets:
+        - "production_db"
+        - "customer_data"
+      options:
+        compress: true
+        master_data: 2
+        
+    file_systems:
+      schedule: "0 3 * * *"  # Daily at 3 AM
+      type: "rsync"
+      targets:
+        - "/data"
+        - "/home"
+        - "/etc"
+      exclude:
+        - "*.tmp"
+        - "*.log"
+        - "/data/cache"

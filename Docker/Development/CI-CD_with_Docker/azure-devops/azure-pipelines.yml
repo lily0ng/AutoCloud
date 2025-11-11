@@ -1,0 +1,108 @@
+trigger:
+  - main
+  - develop
+
+variables:
+  dockerRegistryServiceConnection: 'your-registry-connection'
+  imageRepository: 'your-app'
+  containerRegistry: 'your-registry.azurecr.io'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build and Test
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build Docker image
+      inputs:
+        command: build
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+          latest
+
+    - task: Container@0
+      displayName: Run unit tests
+      inputs:
+        command: run
+        containerRegistry: $(dockerRegistryServiceConnection)
+        repository: $(imageRepository)
+        tag: $(tag)
+        args: npm run test
+
+    - task: ContainerStructureTest@0
+      displayName: Container Structure Test
+      inputs:
+        dockerRegistryServiceConnection: $(dockerRegistryServiceConnection)
+        repository: $(imageRepository)
+        tag: $(tag)
+        configFile: structure-test.yaml
+
+- stage: Security
+  displayName: Security Scan
+  dependsOn: Build
+  jobs:
+  - job: SecurityScan
+    displayName: Run Security Scan
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: ContainerScan@0
+      inputs:
+        dockerRegistryServiceConnection: $(dockerRegistryServiceConnection)
+        repository: $(imageRepository)
+        tag: $(tag)
+        severity: 'CRITICAL,HIGH'
+
+- stage: Push
+  displayName: Push image
+  dependsOn: Security
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: Push
+    displayName: Push to registry
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Push Docker image
+      inputs:
+        command: push
+        repository: $(imageRepository)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+          latest
+
+- stage: Deploy
+  displayName: Deploy to AKS
+  dependsOn: Push
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy to AKS
+    environment: 'production'
+    pool:
+      vmImage: $(vmImageName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            inputs:
+              action: deploy
+              manifests: |
+                $(Pipeline.Workspace)/manifests/deployment.yml
+                $(Pipeline.Workspace)/manifests/service.yml
+              containers: |
+                $(containerRegistry)/$(imageRepository):$(tag)
+              imagePullSecrets: |
+                $(imagePullSecret)

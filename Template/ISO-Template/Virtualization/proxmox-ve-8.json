@@ -1,0 +1,32 @@
+{
+  "name": "Proxmox VE 8",
+  "version": "8.1",
+  "type": "virtualization",
+  "distribution": "proxmox",
+  "architecture": "amd64",
+  "iso_url": "https://www.proxmox.com/en/downloads/proxmox-virtual-environment/iso/proxmox-ve-8-1-iso-installer",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "32",
+    "min_cpu": "2"
+  },
+  "installation": {
+    "target_disk": "/dev/sda",
+    "filesystem": "ext4",
+    "country": "United States",
+    "timezone": "America/New_York",
+    "keyboard": "en-us",
+    "email": "admin@example.com",
+    "password": "secure_password",
+    "hostname": "proxmox.local",
+    "ip_address": "dhcp",
+    "gateway": "auto",
+    "dns": "auto"
+  },
+  "post_install": {
+    "repositories": ["pve-no-subscription"],
+    "packages": ["vim", "htop", "iftop"],
+    "services": ["pveproxy", "pvedaemon", "pvestatd"]
+  }
+}

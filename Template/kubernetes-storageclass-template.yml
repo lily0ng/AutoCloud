@@ -1,0 +1,50 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ${STORAGE_CLASS_NAME}
+  labels:
+    storage-type: ${STORAGE_TYPE}
+    environment: ${ENVIRONMENT}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "${IS_DEFAULT}"
+provisioner: ${PROVISIONER}  # kubernetes.io/aws-ebs, kubernetes.io/gce-pd, etc.
+parameters:
+  type: ${DISK_TYPE}  # gp3, io1, io2 for AWS
+  iopsPerGB: "${IOPS_PER_GB}"
+  fsType: ${FS_TYPE}
+  encrypted: "${ENCRYPTED}"
+  kmsKeyId: ${KMS_KEY_ID}
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: ${RECLAIM_POLICY}  # Delete or Retain
+mountOptions:
+  - debug
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-ssd
+  labels:
+    performance: high
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: io2
+  iopsPerGB: "50"
+  fsType: ext4
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${PVC_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ${STORAGE_CLASS_NAME}
+  resources:
+    requests:
+      storage: ${STORAGE_SIZE}

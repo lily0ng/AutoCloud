@@ -1,0 +1,46 @@
+{
+    "Parameters": {
+        "EnvironmentName": "Production",
+        "FunctionName": "api-processor",
+        "Runtime": "python3.9",
+        "MemorySize": 256,
+        "Timeout": 30
+    },
+    "EnvironmentVariables": {
+        "Development": {
+            "LOG_LEVEL": "DEBUG",
+            "API_ENDPOINT": "https://dev-api.example.com",
+            "ENABLE_TRACING": "true"
+        },
+        "Staging": {
+            "LOG_LEVEL": "INFO",
+            "API_ENDPOINT": "https://staging-api.example.com",
+            "ENABLE_TRACING": "true"
+        },
+        "Production": {
+            "LOG_LEVEL": "WARNING",
+            "API_ENDPOINT": "https://api.example.com",
+            "ENABLE_TRACING": "false"
+        }
+    },
+    "FunctionConfigs": {
+        "Development": {
+            "MemorySize": 128,
+            "Timeout": 60
+        },
+        "Staging": {
+            "MemorySize": 256,
+            "Timeout": 30
+        },
+        "Production": {
+            "MemorySize": 512,
+            "Timeout": 15
+        }
+    },
+    "Tags": {
+        "Project": "Serverless",
+        "Environment": "Production",
+        "Owner": "ServerlessTeam",
+        "CostCenter": "IT-Serverless"
+    }
+}

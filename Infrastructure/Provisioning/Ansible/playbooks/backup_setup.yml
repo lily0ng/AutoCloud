@@ -1,0 +1,35 @@
+---
+- name: Configure Backup System
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install backup tools
+      apt:
+        name:
+          - restic
+          - duplicity
+        state: present
+
+    - name: Create backup directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0750'
+      with_items:
+        - /var/backups/system
+        - /var/backups/databases
+        - /var/backups/applications
+
+    - name: Configure daily backup script
+      template:
+        src: templates/backup_script.sh.j2
+        dest: /usr/local/bin/backup.sh
+        mode: '0750'
+
+    - name: Setup backup cron job
+      cron:
+        name: "Daily backup"
+        hour: "2"
+        minute: "0"
+        job: "/usr/local/bin/backup.sh"
+        state: present

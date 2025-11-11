@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debian-deployment
+  labels:
+    app: debian
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: debian
+  template:
+    metadata:
+      labels:
+        app: debian
+    spec:
+      containers:
+      - name: debian
+        image: debian:11
+        command: ["/bin/sleep", "3650d"]
+        envFrom:
+        - configMapRef:
+            name: debian-config
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: debian-storage
+          mountPath: /data
+      volumes:
+      - name: debian-storage
+        emptyDir: {}

@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: umami-postgres
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - umami-net
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: umami
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://umami:umami123@postgres:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: your-random-secret-key
+    depends_on:
+      - postgres
+    networks:
+      - umami-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  umami-net:
+    driver: bridge

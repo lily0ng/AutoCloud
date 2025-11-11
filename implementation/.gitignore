@@ -1,0 +1,76 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+build/
+dist/
+*.out
+
+# Go
+*.test
+*.prof
+go.sum
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# C
+*.o
+*.a
+*.obj
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+*.pem
+*.key
+
+# Docker
+.dockerignore
+
+# Kubernetes
+kubeconfig
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Backups
+*.bak
+*.backup
+*.sql.gz
+
+# Temporary files
+tmp/
+temp/
+*.tmp

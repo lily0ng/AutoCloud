@@ -1,0 +1,55 @@
+# Patch Management Configuration
+
+# General Settings
+log_directory: "logs"
+run_immediately: true
+schedule_enabled: true
+
+# Schedule Configuration
+schedule:
+  daily: "03:00"  # Run daily at 3 AM
+  weekly: "Sunday 02:00"  # Run weekly on Sunday at 2 AM
+
+# OS-specific configurations
+os_configs:
+  ubuntu:
+    pre_update_commands: []
+    post_update_commands: []
+    exclude_packages: []
+    
+  centos:
+    pre_update_commands: []
+    post_update_commands: []
+    exclude_packages: []
+    
+  rhel:
+    pre_update_commands: []
+    post_update_commands: []
+    exclude_packages: []
+    
+  windows:
+    pre_update_commands: []
+    post_update_commands: []
+    exclude_updates: []
+    
+  macos:
+    pre_update_commands: []
+    post_update_commands: []
+    exclude_updates: []
+
+# Notification Settings
+notifications:
+  email:
+    enabled: false
+    smtp_server: ""
+    smtp_port: 587
+    sender: ""
+    recipients: []
+    username: ""
+    password: ""
+
+# Backup Configuration
+backup:
+  enabled: false
+  backup_dir: "backups"
+  retention_days: 30

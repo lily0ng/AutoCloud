@@ -1,0 +1,62 @@
+monitoring:
+  alerts:
+    cpu_usage:
+      threshold: 80
+      duration: 5m
+      action: notify
+
+    memory_usage:
+      threshold: 85
+      duration: 5m
+      action: notify
+
+    error_rate:
+      threshold: 5
+      duration: 5m
+      action: notify
+
+  metrics:
+    - name: http_request_duration_seconds
+      type: histogram
+      help: HTTP request latency histogram
+      labels:
+        - endpoint
+        - method
+        - status_code
+
+    - name: http_requests_total
+      type: counter
+      help: Total number of HTTP requests
+      labels:
+        - endpoint
+        - method
+        - status_code
+
+    - name: application_errors_total
+      type: counter
+      help: Total number of application errors
+      labels:
+        - error_type
+        - service
+
+  logging:
+    level: info
+    format: json
+    outputs:
+      - type: cloudwatch
+        group: /app/production
+      - type: elasticsearch
+        host: logs.example.com
+
+  dashboards:
+    - name: Application Overview
+      panels:
+        - title: Request Rate
+          metric: http_requests_total
+          type: graph
+        - title: Error Rate
+          metric: application_errors_total
+          type: graph
+        - title: Latency
+          metric: http_request_duration_seconds
+          type: heatmap

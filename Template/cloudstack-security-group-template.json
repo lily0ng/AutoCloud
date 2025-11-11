@@ -1,0 +1,78 @@
+{
+  "name": "CloudStack Security Group Template",
+  "description": "Template for creating security groups with ingress/egress rules",
+  "version": "1.0",
+  "parameters": {
+    "securityGroupName": {
+      "type": "string",
+      "description": "Name of the security group",
+      "required": true
+    },
+    "description": {
+      "type": "string",
+      "description": "Security group description",
+      "default": "Security group for application"
+    }
+  },
+  "resources": {
+    "securityGroup": {
+      "type": "CloudStack::Network::SecurityGroup",
+      "properties": {
+        "name": "${securityGroupName}",
+        "description": "${description}"
+      }
+    },
+    "sshIngressRule": {
+      "type": "CloudStack::Network::SecurityGroupRule",
+      "properties": {
+        "securityGroupId": "${securityGroup.id}",
+        "protocol": "tcp",
+        "startPort": 22,
+        "endPort": 22,
+        "cidrList": ["0.0.0.0/0"],
+        "ruleType": "ingress"
+      }
+    },
+    "httpIngressRule": {
+      "type": "CloudStack::Network::SecurityGroupRule",
+      "properties": {
+        "securityGroupId": "${securityGroup.id}",
+        "protocol": "tcp",
+        "startPort": 80,
+        "endPort": 80,
+        "cidrList": ["0.0.0.0/0"],
+        "ruleType": "ingress"
+      }
+    },
+    "httpsIngressRule": {
+      "type": "CloudStack::Network::SecurityGroupRule",
+      "properties": {
+        "securityGroupId": "${securityGroup.id}",
+        "protocol": "tcp",
+        "startPort": 443,
+        "endPort": 443,
+        "cidrList": ["0.0.0.0/0"],
+        "ruleType": "ingress"
+      }
+    },
+    "egressRule": {
+      "type": "CloudStack::Network::SecurityGroupRule",
+      "properties": {
+        "securityGroupId": "${securityGroup.id}",
+        "protocol": "all",
+        "cidrList": ["0.0.0.0/0"],
+        "ruleType": "egress"
+      }
+    }
+  },
+  "outputs": {
+    "securityGroupId": {
+      "value": "${securityGroup.id}",
+      "description": "Security Group ID"
+    },
+    "name": {
+      "value": "${securityGroup.name}",
+      "description": "Security Group Name"
+    }
+  }
+}

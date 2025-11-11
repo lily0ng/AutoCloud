@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS IAM Role Template'
+
+Parameters:
+  RoleName:
+    Type: String
+    Default: MyIAMRole
+  ServicePrincipal:
+    Type: String
+    Default: ec2.amazonaws.com
+
+Resources:
+  IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Ref ServicePrincipal
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+      Tags:
+        - Key: Name
+          Value: !Ref RoleName
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt IAMRole.Arn
+  RoleName:
+    Value: !Ref IAMRole

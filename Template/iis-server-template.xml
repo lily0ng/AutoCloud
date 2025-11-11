@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IIS Server Template -->
+<!-- Production-ready IIS configuration -->
+
+<configuration>
+  <system.webServer>
+    
+    <!-- Security -->
+    <security>
+      <requestFiltering>
+        <requestLimits maxAllowedContentLength="20971520" maxUrl="4096" maxQueryString="2048" />
+        <fileExtensions>
+          <add fileExtension=".exe" allowed="false" />
+          <add fileExtension=".bat" allowed="false" />
+          <add fileExtension=".cmd" allowed="false" />
+        </fileExtensions>
+        <hiddenSegments>
+          <add segment="web.config" />
+          <add segment="bin" />
+          <add segment="App_code" />
+        </hiddenSegments>
+      </requestFiltering>
+    </security>
+
+    <!-- HTTP Headers -->
+    <httpProtocol>
+      <customHeaders>
+        <add name="X-Frame-Options" value="SAMEORIGIN" />
+        <add name="X-Content-Type-Options" value="nosniff" />
+        <add name="X-XSS-Protection" value="1; mode=block" />
+        <add name="Referrer-Policy" value="strict-origin-when-cross-origin" />
+        <remove name="X-Powered-By" />
+      </customHeaders>
+    </httpProtocol>
+
+    <!-- Compression -->
+    <urlCompression doStaticCompression="true" doDynamicCompression="true" />
+    <httpCompression directory="%SystemDrive%\inetpub\temp\IIS Temporary Compressed Files">
+      <scheme name="gzip" dll="%Windir%\system32\inetsrv\gzip.dll" />
+      <dynamicTypes>
+        <add mimeType="text/*" enabled="true" />
+        <add mimeType="application/javascript" enabled="true" />
+        <add mimeType="application/json" enabled="true" />
+        <add mimeType="*/*" enabled="false" />
+      </dynamicTypes>
+      <staticTypes>
+        <add mimeType="text/*" enabled="true" />
+        <add mimeType="application/javascript" enabled="true" />
+        <add mimeType="*/*" enabled="false" />
+      </staticTypes>
+    </httpCompression>
+
+    <!-- Static Content Caching -->
+    <staticContent>
+      <clientCache cacheControlMode="UseMaxAge" cacheControlMaxAge="365.00:00:00" />
+      <remove fileExtension=".woff" />
+      <mimeMap fileExtension=".woff" mimeType="application/font-woff" />
+      <remove fileExtension=".woff2" />
+      <mimeMap fileExtension=".woff2" mimeType="application/font-woff2" />
+    </staticContent>
+
+    <!-- URL Rewrite -->
+    <rewrite>
+      <rules>
+        <!-- Force HTTPS -->
+        <rule name="Force HTTPS" stopProcessing="true">
+          <match url="(.*)" />
+          <conditions>
+            <add input="{HTTPS}" pattern="^OFF$" />
+          </conditions>
+          <action type="Redirect" url="https://{HTTP_HOST}/{R:1}" redirectType="Permanent" />
+        </rule>
+        
+        <!-- Remove trailing slash -->
+        <rule name="Remove trailing slash" stopProcessing="true">
+          <match url="(.*)/$" />
+          <conditions>
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+          </conditions>
+          <action type="Redirect" url="{R:1}" redirectType="Permanent" />
+        </rule>
+      </rules>
+    </rewrite>
+
+    <!-- Default Document -->
+    <defaultDocument>
+      <files>
+        <clear />
+        <add value="index.html" />
+        <add value="index.htm" />
+        <add value="default.aspx" />
+        <add value="default.htm" />
+      </files>
+    </defaultDocument>
+
+    <!-- Directory Browsing -->
+    <directoryBrowse enabled="false" />
+
+    <!-- HTTP Errors -->
+    <httpErrors errorMode="Custom" existingResponse="Replace">
+      <remove statusCode="404" subStatusCode="-1" />
+      <error statusCode="404" path="/errors/404.html" responseMode="File" />
+      <remove statusCode="500" subStatusCode="-1" />
+      <error statusCode="500" path="/errors/500.html" responseMode="File" />
+    </httpErrors>
+
+  </system.webServer>
+
+  <!-- Application Settings -->
+  <appSettings>
+    <add key="Environment" value="Production" />
+    <add key="EnableLogging" value="true" />
+  </appSettings>
+
+  <!-- Connection Strings -->
+  <connectionStrings>
+    <add name="DefaultConnection" 
+         connectionString="Server=db.example.com;Database=AppDB;Integrated Security=true;" 
+         providerName="System.Data.SqlClient" />
+  </connectionStrings>
+
+</configuration>

@@ -1,0 +1,82 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+stages:
+  - build
+  - test
+  - scan
+  - push
+  - deploy
+
+build:
+  stage: build
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CONTAINER_IMAGE .
+    - docker push $CONTAINER_IMAGE
+
+test:
+  stage: test
+  script:
+    - docker pull $CONTAINER_IMAGE
+    - docker run $CONTAINER_IMAGE npm run test
+
+container_scanning:
+  stage: scan
+  image: aquasec/trivy:latest
+  script:
+    - trivy image $CONTAINER_IMAGE
+  only:
+    - main
+    - develop
+
+push_to_registry:
+  stage: push
+  script:
+    - docker pull $CONTAINER_IMAGE
+    - docker tag $CONTAINER_IMAGE $CI_REGISTRY_IMAGE:latest
+    - docker push $CI_REGISTRY_IMAGE:latest
+  only:
+    - main
+
+.deploy_template: &deploy_template
+  script:
+    - apt-get update -qq && apt-get install -y -qq openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | ssh-add -
+    - mkdir -p ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - ssh $SERVER_USER@$SERVER_HOST "docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY"
+    - ssh $SERVER_USER@$SERVER_HOST "docker pull $CONTAINER_IMAGE"
+    - ssh $SERVER_USER@$SERVER_HOST "docker-compose up -d"
+
+deploy_staging:
+  stage: deploy
+  <<: *deploy_template
+  variables:
+    SERVER_HOST: $STAGING_HOST
+    SERVER_USER: $STAGING_USER
+  environment:
+    name: staging
+  only:
+    - develop
+
+deploy_production:
+  stage: deploy
+  <<: *deploy_template
+  variables:
+    SERVER_HOST: $PRODUCTION_HOST
+    SERVER_USER: $PRODUCTION_USER
+  environment:
+    name: production
+  when: manual
+  only:
+    - main

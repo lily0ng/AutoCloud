@@ -1,0 +1,69 @@
+# Concourse CI Template
+resources:
+  - name: source-code
+    type: git
+    source:
+      uri: https://github.com/myorg/myapp.git
+      branch: main
+  
+  - name: docker-image
+    type: docker-image
+    source:
+      repository: myregistry/myapp
+      username: ((docker-username))
+      password: ((docker-password))
+
+jobs:
+  - name: test
+    plan:
+      - get: source-code
+        trigger: true
+      - task: run-tests
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: node
+              tag: '18'
+          inputs:
+            - name: source-code
+          run:
+            path: sh
+            args:
+              - -c
+              - |
+                cd source-code
+                npm ci
+                npm run lint
+                npm run test
+  
+  - name: build-and-push
+    plan:
+      - get: source-code
+        passed: [test]
+        trigger: true
+      - put: docker-image
+        params:
+          build: source-code
+          tag_as_latest: true
+  
+  - name: deploy
+    plan:
+      - get: docker-image
+        passed: [build-and-push]
+        trigger: true
+      - task: deploy-to-k8s
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: bitnami/kubectl
+          run:
+            path: sh
+            args:
+              - -c
+              - |
+                kubectl set image deployment/myapp myapp=myregistry/myapp:latest
+                kubectl rollout status deployment/myapp

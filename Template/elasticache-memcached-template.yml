@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon ElastiCache Memcached Cluster Template'
+
+Parameters:
+  ClusterName:
+    Type: String
+    Default: memcached-cluster
+
+  CacheNodeType:
+    Type: String
+    Default: cache.t3.micro
+
+  NumCacheNodes:
+    Type: Number
+    Default: 2
+
+  EngineVersion:
+    Type: String
+    Default: '1.6.17'
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnet group for ElastiCache Memcached
+      SubnetIds: !Ref SubnetIds
+
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ElastiCache Memcached
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 11211
+          ToPort: 11211
+          CidrIp: 0.0.0.0/0
+
+  CacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      CacheClusterId: !Ref ClusterName
+      Engine: memcached
+      EngineVersion: !Ref EngineVersion
+      CacheNodeType: !Ref CacheNodeType
+      NumCacheNodes: !Ref NumCacheNodes
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref CacheSecurityGroup
+      AZMode: cross-az
+      PreferredMaintenanceWindow: 'sun:03:00-sun:04:00'
+
+Outputs:
+  CacheEndpoint:
+    Value: !GetAtt CacheCluster.ConfigurationEndpoint.Address
+  CachePort:
+    Value: !GetAtt CacheCluster.ConfigurationEndpoint.Port

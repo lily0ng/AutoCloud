@@ -1,0 +1,37 @@
+apiVersion: 1
+
+log:
+  level: info
+  format: console
+  filters:
+    - module: grafana
+      level: info
+    - module: alerting
+      level: debug
+    - module: auth
+      level: warn
+
+loggers:
+  - name: metrics
+    level: info
+    format: json
+    filename: /var/log/grafana/metrics.log
+    max_size: 100m
+    max_days: 7
+    compress: true
+
+  - name: security
+    level: warn
+    format: json
+    filename: /var/log/grafana/security.log
+    max_size: 100m
+    max_days: 30
+    compress: true
+
+  - name: performance
+    level: info
+    format: json
+    filename: /var/log/grafana/performance.log
+    max_size: 100m
+    max_days: 7
+    compress: true

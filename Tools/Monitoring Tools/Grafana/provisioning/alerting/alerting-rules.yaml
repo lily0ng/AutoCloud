@@ -1,0 +1,51 @@
+apiVersion: 1
+
+groups:
+  - name: OS_Alerts
+    folder: OS Monitoring
+    interval: 1m
+    rules:
+      - name: High CPU Usage
+        condition: avg() of query(A) is above 80
+        for: 5m
+        annotations:
+          summary: High CPU usage detected
+          description: CPU usage is above 80% for 5 minutes
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+      - name: High Memory Usage
+        condition: avg() of query(A) is above 90
+        for: 5m
+        annotations:
+          summary: High memory usage detected
+          description: Memory usage is above 90% for 5 minutes
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+
+      - name: Disk Space Alert
+        condition: avg() of query(A) is above 85
+        for: 5m
+        annotations:
+          summary: Low disk space
+          description: Disk usage is above 85% for 5 minutes
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 100 - ((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes)

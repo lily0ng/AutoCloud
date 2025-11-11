@@ -1,0 +1,25 @@
+apiVersion: v2
+name: autocloud-app
+description: A Helm chart for AutoCloud application
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - autocloud
+  - microservices
+  - cloud
+
+maintainers:
+  - name: AutoCloud Team
+    email: team@autocloud.com
+
+dependencies:
+  - name: postgresql
+    version: 12.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

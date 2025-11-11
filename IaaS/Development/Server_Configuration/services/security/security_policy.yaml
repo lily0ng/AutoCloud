@@ -1,0 +1,58 @@
+security_policy:
+  firewall:
+    default_policy: "DROP"
+    allowed_services:
+      - service: "ssh"
+        port: 22
+        sources:
+          - "10.0.0.0/8"
+          - "192.168.0.0/16"
+      - service: "https"
+        port: 443
+        sources:
+          - "0.0.0.0/0"
+      - service: "esxi-management"
+        port: 443
+        sources:
+          - "192.168.1.0/24"
+      - service: "vmotion"
+        port: 8000
+        sources:
+          - "192.168.2.0/24"
+
+  access_control:
+    password_policy:
+      min_length: 12
+      require_uppercase: true
+      require_lowercase: true
+      require_numbers: true
+      require_special: true
+      max_age_days: 90
+      history_count: 12
+    
+    ssh_config:
+      permit_root_login: false
+      password_authentication: false
+      public_key_authentication: true
+      allowed_groups:
+        - "sysadmin"
+        - "devops"
+
+  monitoring:
+    intrusion_detection:
+      enabled: true
+      rules_update: "daily"
+      alert_email: "security@company.com"
+    
+    log_management:
+      retention_days: 90
+      forward_to_syslog: true
+      syslog_server: "logs.company.com"
+
+  compliance:
+    scan_schedule: "0 4 * * *"  # Daily at 4 AM
+    frameworks:
+      - "CIS"
+      - "NIST"
+    automated_remediation: false
+    exceptions_require_approval: true

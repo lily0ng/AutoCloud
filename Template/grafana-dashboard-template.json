@@ -1,0 +1,25 @@
+{
+  "dashboard": {
+    "title": "Application Metrics",
+    "panels": [
+      {
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total[5m])"
+          }
+        ]
+      },
+      {
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes"
+          }
+        ]
+      }
+    ]
+  }
+}

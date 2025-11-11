@@ -1,0 +1,68 @@
+{
+  "name": "Debian 12 Bookworm",
+  "version": "12",
+  "type": "linux",
+  "distribution": "debian",
+  "architecture": "amd64",
+  "iso_url": "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.2.0-amd64-netinst.iso",
+  "checksum": "sha256:checksum_here",
+  "boot_command": [
+    "<esc><wait>",
+    "auto url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
+    "<enter>"
+  ],
+  "system_requirements": {
+    "min_ram": "1024",
+    "min_disk": "10",
+    "min_cpu": "1"
+  },
+  "preseed": {
+    "locale": "en_US.UTF-8",
+    "keyboard": "us",
+    "network": {
+      "auto": true,
+      "hostname": "debian12",
+      "domain": "local"
+    },
+    "mirror": {
+      "country": "US",
+      "http_hostname": "deb.debian.org",
+      "http_directory": "/debian"
+    },
+    "clock": {
+      "utc": true,
+      "timezone": "America/New_York"
+    },
+    "partitioning": {
+      "method": "regular",
+      "disk": "/dev/sda",
+      "recipe": "atomic"
+    },
+    "accounts": {
+      "root_password": "encrypted_password",
+      "user": {
+        "fullname": "Debian User",
+        "username": "debian",
+        "password": "encrypted_password"
+      }
+    },
+    "packages": {
+      "tasksel": "standard",
+      "individual": [
+        "openssh-server",
+        "build-essential",
+        "curl",
+        "wget",
+        "vim",
+        "git"
+      ]
+    },
+    "grub": {
+      "install_to_mbr": true,
+      "device": "/dev/sda"
+    },
+    "finish": {
+      "reboot": true
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+    "Parameters": {
+        "EnvironmentName": "Production"
+    },
+    "KMSKeys": {
+        "ApplicationKey": {
+            "Description": "KMS key for application encryption",
+            "EnableKeyRotation": true,
+            "PendingWindowInDays": 7,
+            "KeyPolicy": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "Enable IAM User Permissions",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": "arn:aws:iam::ACCOUNT-ID:root"
+                        },
+                        "Action": "kms:*",
+                        "Resource": "*"
+                    },
+                    {
+                        "Sid": "Allow EC2 to use the key",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": "arn:aws:iam::ACCOUNT-ID:role/EC2ServiceRole"
+                        },
+                        "Action": [
+                            "kms:Encrypt",
+                            "kms:Decrypt",
+                            "kms:ReEncrypt*",
+                            "kms:GenerateDataKey*",
+                            "kms:DescribeKey"
+                        ],
+                        "Resource": "*"
+                    }
+                ]
+            }
+        },
+        "DatabaseKey": {
+            "Description": "KMS key for database encryption",
+            "EnableKeyRotation": true,
+            "PendingWindowInDays": 7,
+            "KeyPolicy": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "Enable IAM User Permissions",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": "arn:aws:iam::ACCOUNT-ID:root"
+                        },
+                        "Action": "kms:*",
+                        "Resource": "*"
+                    },
+                    {
+                        "Sid": "Allow RDS to use the key",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": "arn:aws:iam::ACCOUNT-ID:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS"
+                        },
+                        "Action": [
+                            "kms:Encrypt",
+                            "kms:Decrypt",
+                            "kms:ReEncrypt*",
+                            "kms:GenerateDataKey*",
+                            "kms:DescribeKey"
+                        ],
+                        "Resource": "*"
+                    }
+                ]
+            }
+        }
+    },
+    "Tags": {
+        "Project": "KMSInfra",
+        "Environment": "Production",
+        "Owner": "Security-Team",
+        "CostCenter": "IT-Security"
+    }
+}

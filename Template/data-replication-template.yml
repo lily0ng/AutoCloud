@@ -1,0 +1,37 @@
+---
+# Data Replication Template
+apiVersion: replication.autocloud.io/v1
+kind: DataReplication
+metadata:
+  name: data-replication
+  namespace: replication-system
+spec:
+  source:
+    type: database
+    host: primary-db.example.com
+    port: 5432
+    database: production
+  targets:
+    - name: replica-1
+      host: replica-1.example.com
+      port: 5432
+      region: us-west-2
+      type: async
+    - name: replica-2
+      host: replica-2.example.com
+      port: 5432
+      region: eu-west-1
+      type: async
+  replication:
+    mode: streaming  # streaming, logical, snapshot
+    lag:
+      maxSeconds: 60
+      alertThreshold: 300
+    compression: true
+    encryption: true
+  monitoring:
+    enabled: true
+    metrics:
+      - replication_lag_seconds
+      - replication_bytes_sent
+      - replica_status

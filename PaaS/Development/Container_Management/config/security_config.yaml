@@ -1,0 +1,29 @@
+security:
+  firewall_rules:
+    default:
+      - protocol: tcp
+        ports: [22, 80, 443]
+        source: "0.0.0.0/0"
+    
+  ssl_configuration:
+    enabled: true
+    cert_type: "Let's Encrypt"
+    auto_renewal: true
+
+  authentication:
+    methods:
+      - basic_auth
+      - oauth2
+      - api_key
+    
+  monitoring:
+    enabled: true
+    metrics:
+      - cpu_usage
+      - memory_usage
+      - network_io
+      - disk_usage
+    alert_thresholds:
+      cpu_high: 80
+      memory_high: 85
+      disk_high: 90

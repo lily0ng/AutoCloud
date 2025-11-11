@@ -1,0 +1,133 @@
+---
+# Database Sharding Template - MongoDB Sharded Cluster
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-sharding-config
+  namespace: database
+data:
+  mongod.conf: |
+    sharding:
+      clusterRole: shardsvr
+    replication:
+      replSetName: shard01
+---
+# Config Server
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-config
+  namespace: database
+spec:
+  serviceName: mongodb-config
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb-config
+  template:
+    metadata:
+      labels:
+        app: mongodb-config
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:6.0
+        command:
+        - mongod
+        - --configsvr
+        - --replSet
+        - configReplSet
+        - --bind_ip_all
+        ports:
+        - containerPort: 27019
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+# Shard 1
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-shard1
+  namespace: database
+spec:
+  serviceName: mongodb-shard1
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb-shard1
+  template:
+    metadata:
+      labels:
+        app: mongodb-shard1
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:6.0
+        command:
+        - mongod
+        - --shardsvr
+        - --replSet
+        - shard1
+        - --bind_ip_all
+        ports:
+        - containerPort: 27018
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+---
+# Mongos Router
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-mongos
+  namespace: database
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mongodb-mongos
+  template:
+    metadata:
+      labels:
+        app: mongodb-mongos
+    spec:
+      containers:
+      - name: mongos
+        image: mongo:6.0
+        command:
+        - mongos
+        - --configdb
+        - configReplSet/mongodb-config-0.mongodb-config:27019,mongodb-config-1.mongodb-config:27019,mongodb-config-2.mongodb-config:27019
+        - --bind_ip_all
+        ports:
+        - containerPort: 27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-mongos
+  namespace: database
+spec:
+  selector:
+    app: mongodb-mongos
+  ports:
+  - port: 27017
+    targetPort: 27017
+  type: LoadBalancer

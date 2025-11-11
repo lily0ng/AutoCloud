@@ -1,0 +1,48 @@
+---
+- name: System Setup and Hardening
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install essential packages
+      apt:
+        name:
+          - vim
+          - curl
+          - wget
+          - htop
+          - net-tools
+          - ufw
+          - fail2ban
+        state: present
+
+    - name: Configure timezone
+      timezone:
+        name: UTC
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
+        policy: deny
+
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        port: ssh
+        proto: tcp
+
+    - name: Configure fail2ban
+      template:
+        src: templates/jail.local.j2
+        dest: /etc/fail2ban/jail.local
+      notify: restart fail2ban
+
+  handlers:
+    - name: restart fail2ban
+      service:
+        name: fail2ban
+        state: restarted

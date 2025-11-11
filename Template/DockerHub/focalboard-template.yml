@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: focalboard-postgres
+    environment:
+      POSTGRES_DB: focalboard
+      POSTGRES_USER: focalboard
+      POSTGRES_PASSWORD: focalboard123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - focalboard-net
+
+  focalboard:
+    image: mattermost/focalboard:latest
+    container_name: focalboard
+    ports:
+      - "8000:8000"
+    environment:
+      - FOCALBOARD_DB_TYPE=postgres
+      - FOCALBOARD_DB_HOST=postgres:5432
+      - FOCALBOARD_DB_NAME=focalboard
+      - FOCALBOARD_DB_USER=focalboard
+      - FOCALBOARD_DB_PASSWORD=focalboard123
+    volumes:
+      - focalboard_data:/opt/focalboard/data
+    depends_on:
+      - postgres
+    networks:
+      - focalboard-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  focalboard_data:
+
+networks:
+  focalboard-net:
+    driver: bridge

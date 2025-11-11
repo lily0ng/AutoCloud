@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: strapi-postgres
+    environment:
+      POSTGRES_DB: strapi
+      POSTGRES_USER: strapi
+      POSTGRES_PASSWORD: strapi123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - strapi-net
+    restart: unless-stopped
+
+  strapi:
+    image: strapi/strapi:latest
+    container_name: strapi
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: strapi
+      DATABASE_USERNAME: strapi
+      DATABASE_PASSWORD: strapi123
+      JWT_SECRET: your-jwt-secret
+      ADMIN_JWT_SECRET: your-admin-jwt-secret
+      APP_KEYS: your-app-keys
+      API_TOKEN_SALT: your-api-token-salt
+    ports:
+      - "1337:1337"
+    volumes:
+      - strapi_data:/srv/app
+    depends_on:
+      - postgres
+    networks:
+      - strapi-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  strapi_data:
+
+networks:
+  strapi-net:
+    driver: bridge

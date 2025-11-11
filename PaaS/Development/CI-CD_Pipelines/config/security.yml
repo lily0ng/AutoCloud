@@ -1,0 +1,54 @@
+security:
+  authentication:
+    jwt:
+      expiration: 3600
+      refresh_token_expiration: 604800
+      secret_key: ${JWT_SECRET}
+    
+    rate_limiting:
+      enabled: true
+      max_attempts: 5
+      time_window: 300
+
+  authorization:
+    roles:
+      - admin
+      - developer
+      - user
+    permissions:
+      admin:
+        - all
+      developer:
+        - read
+        - write
+      user:
+        - read
+
+  encryption:
+    algorithm: AES-256-GCM
+    key_rotation:
+      enabled: true
+      interval: 90d
+
+  compliance:
+    audit_logging:
+      enabled: true
+      events:
+        - login
+        - logout
+        - data_access
+        - configuration_change
+    retention:
+      logs: 365d
+      audit_trails: 730d
+
+  scanning:
+    enabled: true
+    schedule: "0 0 * * *"
+    tools:
+      - name: snyk
+        severity_threshold: medium
+      - name: sonarqube
+        quality_gate: strict
+      - name: owasp-zap
+        target: https://app.example.com

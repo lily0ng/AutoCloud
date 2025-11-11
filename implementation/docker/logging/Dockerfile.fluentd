@@ -1,0 +1,20 @@
+# Fluentd Logging Dockerfile
+FROM fluent/fluentd:v1.16-1
+
+USER root
+
+RUN apk add --no-cache --update \
+    build-base \
+    ruby-dev
+
+RUN gem install fluent-plugin-elasticsearch \
+    fluent-plugin-kafka \
+    fluent-plugin-prometheus
+
+COPY docker/logging/fluent.conf /fluentd/etc/fluent.conf
+
+USER fluent
+
+EXPOSE 24224 24224/udp
+
+CMD ["fluentd", "-c", "/fluentd/etc/fluent.conf"]

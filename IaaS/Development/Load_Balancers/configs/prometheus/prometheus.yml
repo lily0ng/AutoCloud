@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - localhost:9093
+
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  - job_name: 'load_balancers'
+    static_configs:
+      - targets:
+        - 'localhost:9100'  # Node exporter
+        - 'localhost:9101'  # HAProxy exporter
+        - 'localhost:9113'  # NGINX exporter
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets:
+        - 'nginx-lb-1:9113'
+        - 'nginx-lb-2:9113'
+        - 'nginx-lb-3:9113'
+        - 'nginx-lb-4:9113'
+        - 'nginx-lb-5:9113'
+
+  - job_name: 'haproxy'
+    static_configs:
+      - targets:
+        - 'haproxy-1:9101'
+        - 'haproxy-2:9101'
+        - 'haproxy-3:9101'
+        - 'haproxy-4:9101'
+        - 'haproxy-5:9101'

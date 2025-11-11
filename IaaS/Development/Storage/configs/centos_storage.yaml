@@ -1,0 +1,45 @@
+---
+# CentOS Storage Configuration
+include: base_storage_config.yaml
+
+storage_config:
+  package_dependencies:
+    - lvm2
+    - xfsprogs
+    - btrfs-progs
+    - cryptsetup
+    
+  filesystem_defaults:
+    type: "xfs"  # CentOS default
+    options:
+      - "defaults"
+      - "noatime"
+      
+  selinux:
+    enabled: true
+    context_type: "xfs_t"
+    
+  volume_management:
+    type: "lvm"
+    volume_groups:
+      system:
+        physical_volumes:
+          - "/dev/sda2"
+        logical_volumes:
+          root:
+            size: "30G"
+            mount_point: "/"
+          var:
+            size: "20G"
+            mount_point: "/var"
+          home:
+            size: "100%FREE"
+            mount_point: "/home"
+            
+  backup:
+    snapshot_support: true
+    snapshot_size: "20%"
+    retention_policy:
+      daily: 7
+      weekly: 4
+      monthly: 3

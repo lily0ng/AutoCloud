@@ -1,0 +1,30 @@
+---
+# ESXi Host Resource Allocation Configuration
+esxi_host_profiles:
+  standard:
+    cpu_cores: 16
+    memory: 65536  # MB
+    storage: 2000  # GB
+    network:
+      uplink_bandwidth: 10000  # Mbps
+      max_vms: 20
+  performance:
+    cpu_cores: 32
+    memory: 131072
+    storage: 4000
+    network:
+      uplink_bandwidth: 20000
+      max_vms: 40
+  enterprise:
+    cpu_cores: 64
+    memory: 262144
+    storage: 8000
+    network:
+      uplink_bandwidth: 40000
+      max_vms: 80
+
+resource_limits:
+  max_vcpu_per_vm: 8
+  max_memory_per_vm: 32768  # MB
+  max_storage_per_vm: 1000  # GB
+  max_vms_per_host: 100

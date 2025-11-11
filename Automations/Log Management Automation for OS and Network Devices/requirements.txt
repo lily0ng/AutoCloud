@@ -1,0 +1,115 @@
+# Core Dependencies
+python-logstash==0.4.8
+elasticsearch==8.11.1
+requests==2.31.0
+python-dateutil==2.8.2
+schedule==1.2.1
+PyYAML==6.0.1
+slack-sdk==3.26.1
+boto3==1.34.7
+psutil==5.9.7
+prometheus_client==0.19.0
+python-dotenv==1.0.0
+pandas==2.1.4
+numpy==1.26.2
+Flask==3.0.0
+typing-extensions==4.9.0
+
+# OS-Specific Dependencies
+## Windows
+pywinrm==0.4.3
+wmi==1.5.1
+pywin32==306; sys_platform == 'win32'
+windows-curses==2.3.1; sys_platform == 'win32'
+
+## Linux
+systemd-python==235; sys_platform == 'linux'
+linux-metrics==0.1.4; sys_platform == 'linux'
+inotify==0.2.10; sys_platform == 'linux'
+
+## macOS
+pyobjc-framework-SystemConfiguration==9.2; sys_platform == 'darwin'
+pyobjc-framework-Cocoa==9.2; sys_platform == 'darwin'
+
+## FreeBSD
+py-freebsd==0.9.3; sys_platform == 'freebsd'
+
+## Solaris
+py-solaris==0.1.2; sys_platform == 'sunos5'
+
+# Network Device Dependencies
+## Cisco
+netmiko==4.2.0
+ciscoconfparse==1.9.40
+ncclient==0.6.13
+napalm==4.1.0
+
+## Palo Alto
+pan-python==0.17.0
+pan-os-python==1.11.0
+
+## Fortinet
+fortiosapi==1.0.5
+netmiko-fortinet==1.0.0
+
+## F5
+f5-sdk==3.0.21
+bigsuds==1.0.6
+f5-icontrol-rest==1.3.18
+
+## Check Point
+checkpoint-mgmt-api==1.7.0
+cpapi==1.0.0
+
+## Arista
+pyeapi==0.8.4
+pyaoscx==2.3.0
+
+## Juniper
+junos-eznc==2.6.8
+jxmlease==1.0.3
+
+## Huawei
+huaweiapi==1.0.1
+huawei-lldp==1.0.2
+
+## MikroTik
+routeros_api==0.17.0
+librouteros==3.2.0
+
+## VMware
+pyvmomi==8.0.2.0.1
+vsphere-automation-sdk-python==1.86.0
+
+# Security & Encryption
+cryptography==41.0.7
+pyOpenSSL==23.3.0
+paramiko==3.4.0
+scp==0.14.5
+bcrypt==4.1.2
+
+# Monitoring & Metrics
+statsd==4.0.1
+datadog==0.48.0
+newrelic==9.3.0
+pysnmp==4.4.12
+
+# Compression & Data Handling
+gzip-reader==0.1.4
+python-snappy==0.6.1
+lz4==4.3.2
+zstandard==0.22.0
+
+# Database Connectors
+pymongo==4.6.1
+redis==5.0.1
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+mysql-connector-python==8.2.0
+
+# Testing & Development
+pytest==7.4.3
+pytest-cov==4.1.0
+black==23.12.0
+flake8==6.1.0
+mypy==1.7.1

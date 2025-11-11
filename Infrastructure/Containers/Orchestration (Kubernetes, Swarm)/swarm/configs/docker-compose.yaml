@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  web:
+    image: nginx:latest
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/conf.d/default.conf
+    volumes:
+      - app-data:/app/data
+
+  backend:
+    image: redis:latest
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+    networks:
+      - app-network
+    volumes:
+      - redis-data:/data
+
+networks:
+  app-network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  app-data:
+  redis-data:
+
+configs:
+  nginx_config:
+    file: ./nginx.conf
+
+secrets:
+  app_secret:
+    file: ./app_secret.txt

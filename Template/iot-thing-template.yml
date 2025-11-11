@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS IoT Core Thing Template'
+
+Parameters:
+  ThingName:
+    Type: String
+    Default: MyIoTThing
+
+Resources:
+  IoTThing:
+    Type: AWS::IoT::Thing
+    Properties:
+      ThingName: !Ref ThingName
+      AttributePayload:
+        Attributes:
+          Location: Datacenter
+          DeviceType: Sensor
+
+  IoTPolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyName: !Sub '${ThingName}-Policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - iot:Connect
+              - iot:Publish
+              - iot:Subscribe
+              - iot:Receive
+            Resource: '*'
+
+  IoTCertificate:
+    Type: AWS::IoT::Certificate
+    Properties:
+      Status: ACTIVE
+
+  PolicyPrincipalAttachment:
+    Type: AWS::IoT::PolicyPrincipalAttachment
+    Properties:
+      PolicyName: !Ref IoTPolicy
+      Principal: !GetAtt IoTCertificate.Arn
+
+  ThingPrincipalAttachment:
+    Type: AWS::IoT::ThingPrincipalAttachment
+    Properties:
+      ThingName: !Ref IoTThing
+      Principal: !GetAtt IoTCertificate.Arn
+
+Outputs:
+  ThingArn:
+    Value: !GetAtt IoTThing.Arn
+  CertificateArn:
+    Value: !GetAtt IoTCertificate.Arn

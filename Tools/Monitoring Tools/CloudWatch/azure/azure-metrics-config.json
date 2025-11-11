@@ -1,0 +1,41 @@
+{
+  "azure_monitor": {
+    "subscription_id": "${AZURE_SUBSCRIPTION_ID}",
+    "resource_groups": ["production", "staging"],
+    "metrics_export": {
+      "interval": 300,
+      "destination": {
+        "cloudwatch_region": "us-west-2",
+        "namespace": "Azure/Metrics"
+      },
+      "metrics": {
+        "virtual_machines": {
+          "metrics": ["Percentage CPU", "Available Memory Bytes", "Disk Read Bytes", "Disk Write Bytes"],
+          "dimensions": ["VMName", "ResourceGroup"]
+        },
+        "app_services": {
+          "metrics": ["Http2xx", "Http4xx", "Http5xx", "ResponseTime"],
+          "dimensions": ["AppName", "Instance"]
+        },
+        "databases": {
+          "metrics": ["cpu_percent", "storage_percent", "dtu_consumption_percent"],
+          "dimensions": ["DatabaseName", "ServerName"]
+        }
+      }
+    },
+    "logs_export": {
+      "log_groups": [
+        {
+          "category": "ApplicationLogs",
+          "retention_days": 30,
+          "destination": "CloudWatch"
+        },
+        {
+          "category": "SystemLogs",
+          "retention_days": 30,
+          "destination": "CloudWatch"
+        }
+      ]
+    }
+  }
+}

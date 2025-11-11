@@ -1,0 +1,482 @@
+---
+# Full Backup Template
+# Complete backup configuration for full system backups
+
+apiVersion: backup.autocloud.io/v1
+kind: FullBackup
+metadata:
+  name: full-backup
+  namespace: backup-system
+  labels:
+    app: full-backup
+    backup-type: full
+    environment: production
+  annotations:
+    description: "Complete full backup of all systems and data"
+    version: "1.0.0"
+
+spec:
+  # Backup Schedule
+  schedule:
+    cron: "0 1 * * 0"  # Weekly on Sunday at 1 AM
+    timezone: "UTC"
+    enabled: true
+    
+    # Maintenance windows
+    maintenanceWindow:
+      start: "01:00"
+      end: "06:00"
+      timezone: "UTC"
+
+  # Full Backup Sources
+  sources:
+    # Application data
+    - name: application-data
+      type: filesystem
+      paths:
+        - /var/app
+        - /opt/application
+        - /usr/local/app
+      preservePermissions: true
+      preserveOwnership: true
+      preserveTimestamps: true
+      followSymlinks: false
+      
+    # System configuration
+    - name: system-config
+      type: filesystem
+      paths:
+        - /etc
+        - /root
+        - /home
+      exclude:
+        - /etc/mtab
+        - /etc/fstab
+        
+    # Databases
+    - name: postgresql-database
+      type: database
+      engine: postgresql
+      host: db.example.com
+      port: 5432
+      databases:
+        - production_db
+        - analytics_db
+        - reporting_db
+      dumpOptions:
+        format: custom
+        compress: 9
+        blobs: true
+        
+    - name: mysql-database
+      type: database
+      engine: mysql
+      host: mysql.example.com
+      port: 3306
+      databases:
+        - wordpress
+        - ecommerce
+      dumpOptions:
+        singleTransaction: true
+        routines: true
+        triggers: true
+        events: true
+        
+    # NoSQL databases
+    - name: mongodb-database
+      type: database
+      engine: mongodb
+      host: mongo.example.com
+      port: 27017
+      databases:
+        - userdata
+        - sessions
+      dumpOptions:
+        oplog: true
+        gzip: true
+        
+    # Object storage
+    - name: s3-buckets
+      type: s3
+      buckets:
+        - user-uploads
+        - static-assets
+        - application-data
+      region: us-east-1
+      
+    # Container volumes
+    - name: docker-volumes
+      type: docker-volume
+      volumes:
+        - app-data
+        - db-data
+        - cache-data
+        
+    # Virtual machines
+    - name: vm-snapshots
+      type: vm
+      provider: vmware
+      vms:
+        - prod-web-01
+        - prod-web-02
+        - prod-app-01
+      snapshotType: full
+      quiesce: true
+
+  # Destination Configuration
+  destination:
+    primary:
+      type: s3
+      bucket: full-backups-primary
+      region: us-east-1
+      prefix: "full-backup/${DATE}/"
+      storageClass: STANDARD
+      
+      # Versioning
+      versioning:
+        enabled: true
+        maxVersions: 4
+        
+      # Encryption
+      encryption:
+        enabled: true
+        type: SSE-KMS
+        kmsKeyId: arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+        
+    # Secondary backup location
+    secondary:
+      type: azure-blob
+      storageAccount: fullbackupstorage
+      container: full-backups
+      region: eastus
+      replication: GRS
+      
+    # Tertiary backup (tape/archive)
+    tertiary:
+      type: tape
+      library: /dev/nst0
+      mediaPool: FULL_BACKUP_POOL
+      retention: 365d
+
+  # Backup Options
+  options:
+    # Compression
+    compression:
+      enabled: true
+      algorithm: zstd
+      level: 9  # Maximum compression for full backups
+      threads: 8
+      
+    # Encryption
+    encryption:
+      enabled: true
+      algorithm: AES-256-GCM
+      keyManagement: vault
+      vaultAddress: https://vault.example.com
+      vaultPath: secret/backup/encryption-key
+      
+    # Verification
+    verification:
+      enabled: true
+      method: full-restore-test
+      testEnvironment: backup-validation
+      checksumAlgorithm: SHA512
+      
+    # Deduplication
+    deduplication:
+      enabled: true
+      scope: global
+      blockSize: 128KB
+      
+    # Parallelism
+    parallelism:
+      enabled: true
+      maxConcurrentSources: 4
+      threadsPerSource: 4
+      
+    # Bandwidth management
+    bandwidth:
+      limit: 1000MB/s
+      adaptive: true
+      qos: high
+
+  # Consistency and Integrity
+  consistency:
+    # Application consistency
+    applicationConsistent: true
+    
+    # Pre-backup actions
+    preBackup:
+      - name: stop-services
+        services:
+          - nginx
+          - application
+        timeout: 300
+        
+      - name: flush-databases
+        databases:
+          - postgresql
+          - mysql
+          - mongodb
+        timeout: 600
+        
+      - name: sync-filesystem
+        command: sync
+        timeout: 60
+        
+    # Post-backup actions
+    postBackup:
+      - name: start-services
+        services:
+          - nginx
+          - application
+        timeout: 300
+        
+    # Consistency checks
+    checks:
+      - name: filesystem-check
+        type: fsck
+        enabled: false  # Don't run on live system
+        
+      - name: database-integrity
+        type: dbcheck
+        enabled: true
+
+  # Retention Policy
+  retention:
+    # Full backup retention
+    policy: tower-of-hanoi
+    
+    # Retention rules
+    rules:
+      - name: weekly-full
+        type: full
+        duration: 4w
+        
+      - name: monthly-full
+        type: full
+        duration: 12m
+        
+      - name: yearly-full
+        type: full
+        duration: 7y
+        archiveToTape: true
+        
+    # Lifecycle management
+    lifecycle:
+      - age: 30d
+        action: transition
+        storageClass: GLACIER
+        
+      - age: 90d
+        action: transition
+        storageClass: DEEP_ARCHIVE
+        
+      - age: 2555d  # 7 years
+        action: delete
+
+  # Monitoring and Alerting
+  monitoring:
+    enabled: true
+    
+    # Metrics collection
+    metrics:
+      - full_backup_size_bytes
+      - full_backup_duration_seconds
+      - full_backup_success_rate
+      - compression_ratio
+      - deduplication_ratio
+      - verification_status
+      
+    # Health checks
+    healthChecks:
+      - name: backup-completion
+        interval: 1h
+        timeout: 6h
+        
+      - name: backup-integrity
+        interval: 24h
+        
+      - name: storage-capacity
+        interval: 1h
+        threshold: 80%
+        
+    # Alerts
+    alerts:
+      - name: backup-failed
+        condition: backup_status == "failed"
+        severity: critical
+        channels:
+          - pagerduty
+          - email
+          - slack
+          
+      - name: backup-duration-exceeded
+        condition: backup_duration > 6h
+        severity: warning
+        
+      - name: storage-capacity-warning
+        condition: storage_used_percent > 80
+        severity: warning
+        
+      - name: verification-failed
+        condition: verification_status == "failed"
+        severity: critical
+
+  # Reporting
+  reporting:
+    enabled: true
+    
+    # Report schedule
+    schedule:
+      - type: summary
+        frequency: daily
+        time: "08:00"
+        
+      - type: detailed
+        frequency: weekly
+        day: monday
+        time: "09:00"
+        
+      - type: compliance
+        frequency: monthly
+        day: 1
+        time: "10:00"
+        
+    # Report recipients
+    recipients:
+      - backup-team@example.com
+      - ops-team@example.com
+      - compliance@example.com
+      
+    # Report content
+    content:
+      - backupStatus
+      - backupSize
+      - duration
+      - compressionRatio
+      - deduplicationRatio
+      - verificationStatus
+      - storageUsage
+      - costAnalysis
+
+  # Recovery Configuration
+  recovery:
+    # Recovery testing
+    testing:
+      enabled: true
+      schedule: "0 8 1 * *"  # Monthly on 1st at 8 AM
+      testEnvironment: backup-recovery-test
+      fullRestore: true
+      validateData: true
+      
+    # Recovery procedures
+    procedures:
+      - name: full-system-restore
+        documentation: /docs/recovery/full-system-restore.md
+        estimatedTime: 4h
+        
+      - name: selective-restore
+        documentation: /docs/recovery/selective-restore.md
+        estimatedTime: 1h
+        
+    # Recovery objectives
+    objectives:
+      rpo: 7d   # Recovery Point Objective: 1 week
+      rto: 24h  # Recovery Time Objective: 24 hours
+
+  # Security and Compliance
+  security:
+    # Access control
+    accessControl:
+      enabled: true
+      rbac: true
+      allowedRoles:
+        - backup-admin
+        - system-admin
+      mfa: required
+      
+    # Audit logging
+    audit:
+      enabled: true
+      logAllAccess: true
+      logAllOperations: true
+      retentionDays: 365
+      
+    # Compliance
+    compliance:
+      enabled: true
+      standards:
+        - SOC2
+        - ISO27001
+        - HIPAA
+        - GDPR
+        - PCI-DSS
+      
+      # Compliance reporting
+      reporting:
+        enabled: true
+        schedule: monthly
+        
+    # Immutability
+    immutability:
+      enabled: true
+      lockDuration: 90d
+      governance: compliance
+
+  # Advanced Configuration
+  advanced:
+    # Bare metal recovery
+    bareMetalRecovery:
+      enabled: true
+      bootableMedia: true
+      systemImage: true
+      
+    # Application-aware backup
+    applicationAware:
+      enabled: true
+      applications:
+        - name: oracle
+          plugin: oracle-rman
+        - name: sap
+          plugin: sap-hana
+        - name: exchange
+          plugin: exchange-dag
+          
+    # Cloud integration
+    cloudIntegration:
+      enabled: true
+      providers:
+        - aws
+        - azure
+        - gcp
+      
+    # Disaster recovery
+    disasterRecovery:
+      enabled: true
+      drSite: us-west-2
+      replication: synchronous
+      failoverTesting: quarterly
+
+---
+# Full Backup Execution Guide
+#
+# Pre-backup checklist:
+# 1. Verify maintenance window
+# 2. Check storage capacity
+# 3. Notify stakeholders
+# 4. Verify backup infrastructure
+#
+# Post-backup verification:
+# 1. Check backup completion status
+# 2. Verify backup integrity
+# 3. Test restore capability
+# 4. Update backup catalog
+# 5. Generate compliance reports
+#
+# Recovery procedures:
+# 1. Identify recovery point
+# 2. Prepare recovery environment
+# 3. Execute restore
+# 4. Verify data integrity
+# 5. Resume operations

@@ -1,0 +1,44 @@
+---
+# Global variables for all hosts
+
+# System Configuration
+timezone: UTC
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+  - 2.pool.ntp.org
+
+# Security Configuration
+ssh_port: 22
+allowed_ssh_users:
+  - ansible
+  - admin
+max_auth_tries: 3
+password_authentication: "no"
+
+# Backup Configuration
+backup_retention_days: 30
+backup_directories:
+  - /etc
+  - /var/log
+  - /home
+
+# Monitoring Configuration
+prometheus_retention_days: 15
+node_exporter_port: 9100
+grafana_port: 3000
+
+# Cloud Provider Settings
+cloud_region: us-east-1
+instance_type: t3.medium
+vpc_cidr: 10.0.0.0/16
+
+# Application Defaults
+app_user: appuser
+app_group: appgroup
+app_base_dir: /opt/applications
+
+# Database Configuration
+db_backup_time: "00:00"
+db_backup_retention: 7
+db_max_connections: 100

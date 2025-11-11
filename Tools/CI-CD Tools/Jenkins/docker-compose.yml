@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  jenkins:
+    build: .
+    container_name: jenkins
+    restart: unless-stopped
+    environment:
+      - JENKINS_OPTS="--prefix=/jenkins"
+      - JENKINS_SLAVE_AGENT_PORT=50000
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins-network
+
+networks:
+  jenkins-network:
+    driver: bridge
+
+volumes:
+  jenkins_home:
+    driver: local

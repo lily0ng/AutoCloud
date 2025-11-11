@@ -1,0 +1,129 @@
+---
+# Local Backup Template
+# On-premises and local storage backup configuration
+
+apiVersion: backup.autocloud.io/v1
+kind: LocalBackup
+metadata:
+  name: local-backup
+  namespace: backup-system
+  labels:
+    app: local-backup
+    backup-type: local
+    environment: production
+
+spec:
+  # Local Storage Configuration
+  storage:
+    primary:
+      type: filesystem
+      path: /backup/primary
+      mountPoint: /mnt/backup-primary
+      filesystem: ext4
+      capacity: 10TB
+      
+    secondary:
+      type: nas
+      host: nas.example.com
+      sharePath: /backups
+      protocol: nfs  # nfs, smb, iscsi
+      mountPoint: /mnt/backup-nas
+      
+    tertiary:
+      type: tape
+      device: /dev/nst0
+      library: /dev/sg0
+      mediaPool: DAILY_BACKUP
+
+  # Backup Schedule
+  schedule:
+    cron: "0 2 * * *"
+    timezone: "UTC"
+    enabled: true
+
+  # Source Configuration
+  sources:
+    - name: local-data
+      type: filesystem
+      paths:
+        - /var/data
+        - /home
+        - /opt
+      preservePermissions: true
+      preserveOwnership: true
+      
+    - name: system-config
+      type: filesystem
+      paths:
+        - /etc
+      
+    - name: databases
+      type: database
+      engines:
+        - postgresql
+        - mysql
+
+  # Backup Options
+  options:
+    compression:
+      enabled: true
+      algorithm: zstd
+      level: 3
+      
+    encryption:
+      enabled: true
+      algorithm: AES-256-CBC
+      keyFile: /etc/backup/encryption.key
+      
+    verification:
+      enabled: true
+      method: checksum
+      algorithm: SHA256
+      
+    hardlinks:
+      enabled: true  # For space-efficient incremental backups
+      
+    rsync:
+      enabled: true
+      options:
+        - archive
+        - compress
+        - delete
+        - partial
+
+  # Retention Policy
+  retention:
+    daily: 7
+    weekly: 4
+    monthly: 6
+    
+    cleanup:
+      enabled: true
+      schedule: "0 4 * * 0"
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    diskSpace:
+      alertThreshold: 90
+    metrics:
+      - backup_size_bytes
+      - storage_used_percent
+      - backup_duration_seconds
+    
+    notifications:
+      email:
+        enabled: true
+        recipients:
+          - backup-admin@example.com
+      slack:
+        enabled: true
+        webhook: https://hooks.slack.com/services/YOUR/WEBHOOK
+
+  # Recovery
+  recovery:
+    quickRestore: true
+    mountReadOnly: true
+    testRestore:
+      enabled: true
+      schedule: "0 6 * * 0"

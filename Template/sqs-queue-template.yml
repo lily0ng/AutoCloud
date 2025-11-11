@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon SQS Queue Template'
+
+Parameters:
+  QueueName:
+    Type: String
+    Default: MySqsQueue
+
+Resources:
+  SQSQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref QueueName
+      VisibilityTimeout: 30
+      MessageRetentionPeriod: 345600
+      ReceiveMessageWaitTimeSeconds: 20
+      DelaySeconds: 0
+
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${QueueName}-DLQ'
+
+Outputs:
+  QueueUrl:
+    Value: !Ref SQSQueue
+  QueueArn:
+    Value: !GetAtt SQSQueue.Arn

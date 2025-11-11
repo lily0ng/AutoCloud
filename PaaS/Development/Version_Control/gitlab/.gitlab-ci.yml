@@ -1,0 +1,82 @@
+image: alpine:latest
+
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+# Cache dependencies between jobs
+cache:
+  paths:
+    - node_modules/
+    - .npm/
+
+# Testing stage
+test:
+  stage: test
+  image: node:latest
+  script:
+    - npm install
+    - npm test
+  only:
+    - merge_requests
+    - main
+
+# Build stage
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  only:
+    - main
+
+# Deploy to staging
+deploy_staging:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Deploying to staging..."
+    - kubectl apply -f k8s/staging/
+  environment:
+    name: staging
+  only:
+    - main
+
+# Deploy to production
+deploy_production:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Deploying to production..."
+    - kubectl apply -f k8s/production/
+  environment:
+    name: production
+  when: manual
+  only:
+    - main
+
+# Security scanning
+security_scan:
+  stage: test
+  image: security-scanner
+  script:
+    - run-security-scan
+  allow_failure: true
+
+# Code quality
+code_quality:
+  stage: test
+  image: docker:stable
+  script:
+    - run-code-quality
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json

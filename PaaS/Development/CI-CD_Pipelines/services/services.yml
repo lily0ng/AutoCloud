@@ -1,0 +1,117 @@
+services:
+  # 1. API Gateway Service
+  api-gateway:
+    image: nginx:alpine
+    replicas: 3
+    ports:
+      - 80:80
+      - 443:443
+    config:
+      routes:
+        - path: /api/v1
+          service: core-api
+          methods: [GET, POST, PUT, DELETE]
+        - path: /auth
+          service: auth-service
+          methods: [POST]
+
+  # 2. Authentication Service
+  auth-service:
+    image: auth-service:latest
+    replicas: 2
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_CONNECTION=${AUTH_DB_URL}
+    healthcheck:
+      path: /health
+      interval: 30s
+
+  # 3. User Service
+  user-service:
+    image: user-service:latest
+    replicas: 2
+    environment:
+      - DB_CONNECTION=${USER_DB_URL}
+      - REDIS_URL=${REDIS_URL}
+    dependencies:
+      - auth-service
+      - redis
+
+  # 4. Payment Service
+  payment-service:
+    image: payment-service:latest
+    replicas: 2
+    environment:
+      - STRIPE_KEY=${STRIPE_SECRET_KEY}
+      - PAYMENT_DB_URL=${PAYMENT_DB_URL}
+    secrets:
+      - stripe-secret
+      - payment-cert
+
+  # 5. Notification Service
+  notification-service:
+    image: notification-service:latest
+    replicas: 2
+    environment:
+      - SMTP_HOST=${SMTP_HOST}
+      - AWS_SNS_KEY=${AWS_SNS_KEY}
+    queues:
+      - email-queue
+      - sms-queue
+
+  # 6. Search Service
+  search-service:
+    image: elasticsearch:7
+    replicas: 3
+    volumes:
+      - search-data:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+
+  # 7. Cache Service
+  cache-service:
+    image: redis:6-alpine
+    replicas: 3
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+  # 8. Analytics Service
+  analytics-service:
+    image: analytics-service:latest
+    replicas: 2
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - CLICKHOUSE_URL=${CLICKHOUSE_URL}
+    dependencies:
+      - kafka
+      - clickhouse
+
+  # 9. Logging Service
+  logging-service:
+    image: fluentd:v1.14-1
+    replicas: 2
+    volumes:
+      - /var/log:/var/log
+    environment:
+      - ELASTICSEARCH_HOST=${ES_HOST}
+      - ELASTICSEARCH_PORT=${ES_PORT}
+
+  # 10. Monitoring Service
+  monitoring-service:
+    image: prometheus:v2.30.3
+    replicas: 1
+    ports:
+      - 9090:9090
+    volumes:
+      - prometheus-data:/prometheus
+    config:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      alerting:
+        alertmanagers:
+          - static_configs:
+              - targets: ["alertmanager:9093"]

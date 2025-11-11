@@ -1,0 +1,90 @@
+{
+  "name": "Windows 11 Pro",
+  "version": "23H2",
+  "type": "windows",
+  "edition": "Professional",
+  "architecture": "x86_64",
+  "iso_url": "https://software-download.microsoft.com/download/Windows_11_Pro.iso",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "4096",
+    "min_disk": "64",
+    "min_cpu": "2",
+    "tpm": "2.0",
+    "secure_boot": true
+  },
+  "autounattend": {
+    "settings": {
+      "windowsPE": {
+        "setupUILanguage": "en-US",
+        "inputLocale": "en-US",
+        "systemLocale": "en-US",
+        "uiLanguage": "en-US",
+        "userLocale": "en-US"
+      },
+      "diskConfiguration": {
+        "disk": {
+          "diskID": "0",
+          "willWipeDisk": true,
+          "createPartitions": {
+            "efi": {
+              "order": "1",
+              "size": "100",
+              "type": "EFI"
+            },
+            "msr": {
+              "order": "2",
+              "size": "16",
+              "type": "MSR"
+            },
+            "windows": {
+              "order": "3",
+              "extend": true,
+              "type": "Primary"
+            }
+          },
+          "modifyPartitions": {
+            "efi": {
+              "format": "FAT32",
+              "label": "System"
+            },
+            "windows": {
+              "format": "NTFS",
+              "label": "Windows"
+            }
+          }
+        }
+      },
+      "imageInstall": {
+        "osImage": {
+          "installFrom": {
+            "metaData": {
+              "key": "/IMAGE/NAME",
+              "value": "Windows 11 Pro"
+            }
+          }
+        }
+      },
+      "userAccounts": {
+        "localAccounts": [{
+          "name": "Admin",
+          "password": "P@ssw0rd123!",
+          "group": "Administrators"
+        }]
+      }
+    },
+    "oobeSystem": {
+      "hideEULAPage": true,
+      "hideOEMRegistrationScreen": true,
+      "hideOnlineAccountScreens": true,
+      "hideWirelessSetupInOOBE": true,
+      "protectYourPC": "3",
+      "timeZone": "UTC"
+    }
+  },
+  "post_install": {
+    "remove_bloatware": true,
+    "disable_telemetry": true,
+    "optimize_performance": true
+  }
+}

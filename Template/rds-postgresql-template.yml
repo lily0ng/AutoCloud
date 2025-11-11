@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon RDS PostgreSQL Database Template'
+
+Parameters:
+  DBInstanceIdentifier:
+    Type: String
+    Default: postgresql-database
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+
+  EngineVersion:
+    Type: String
+    Default: '15.4'
+
+  MasterUsername:
+    Type: String
+    Default: postgres
+    NoEcho: true
+
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+
+  AllocatedStorage:
+    Type: Number
+    Default: 20
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for PostgreSQL RDS
+      SubnetIds: !Ref SubnetIds
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS PostgreSQL
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 0.0.0.0/0
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: postgres
+      EngineVersion: !Ref EngineVersion
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      AllocatedStorage: !Ref AllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      BackupRetentionPeriod: 7
+      EnableCloudwatchLogsExports:
+        - postgresql
+      DeletionProtection: false
+
+Outputs:
+  DBEndpoint:
+    Value: !GetAtt DBInstance.Endpoint.Address
+  DBPort:
+    Value: !GetAtt DBInstance.Endpoint.Port

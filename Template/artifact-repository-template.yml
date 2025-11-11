@@ -1,0 +1,168 @@
+---
+# Artifact Repository Template
+# Nexus/Harbor configuration
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nexus
+  namespace: cicd
+spec:
+  serviceName: nexus
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexus
+  template:
+    metadata:
+      labels:
+        app: nexus
+    spec:
+      containers:
+      - name: nexus
+        image: sonatype/nexus3:latest
+        ports:
+        - containerPort: 8081
+          name: http
+        - containerPort: 5000
+          name: docker
+        volumeMounts:
+        - name: nexus-data
+          mountPath: /nexus-data
+        env:
+        - name: INSTALL4J_ADD_VM_PARAMS
+          value: "-Xms2g -Xmx2g -XX:MaxDirectMemorySize=3g"
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 4Gi
+          limits:
+            cpu: 2000m
+            memory: 8Gi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8081
+          initialDelaySeconds: 180
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 30
+  volumeClaimTemplates:
+  - metadata:
+      name: nexus-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 500Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus
+  namespace: cicd
+spec:
+  selector:
+    app: nexus
+  ports:
+  - port: 8081
+    targetPort: 8081
+    name: http
+  - port: 5000
+    targetPort: 5000
+    name: docker
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-config
+  namespace: cicd
+data:
+  nexus.properties: |
+    nexus-context-path=/
+    application-port=8081
+    application-host=0.0.0.0
+  
+  docker-repository.json: |
+    {
+      "name": "docker-hosted",
+      "online": true,
+      "storage": {
+        "blobStoreName": "default",
+        "strictContentTypeValidation": true,
+        "writePolicy": "ALLOW"
+      },
+      "docker": {
+        "v1Enabled": false,
+        "forceBasicAuth": true,
+        "httpPort": 5000
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harbor-registry
+  namespace: cicd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+    spec:
+      containers:
+      - name: registry
+        image: goharbor/harbor-registryctl:latest
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: registry-data
+          mountPath: /storage
+        env:
+        - name: REGISTRY_HTTP_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: harbor-secret
+              key: secret
+      volumes:
+      - name: registry-data
+        persistentVolumeClaim:
+          claimName: harbor-registry-pvc
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: maven-settings
+  namespace: cicd
+data:
+  settings.xml: |
+    <settings>
+      <servers>
+        <server>
+          <id>nexus-releases</id>
+          <username>${env.NEXUS_USERNAME}</username>
+          <password>${env.NEXUS_PASSWORD}</password>
+        </server>
+        <server>
+          <id>nexus-snapshots</id>
+          <username>${env.NEXUS_USERNAME}</username>
+          <password>${env.NEXUS_PASSWORD}</password>
+        </server>
+      </servers>
+      <mirrors>
+        <mirror>
+          <id>nexus</id>
+          <mirrorOf>*</mirrorOf>
+          <url>http://nexus:8081/repository/maven-public/</url>
+        </mirror>
+      </mirrors>
+    </settings>

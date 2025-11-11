@@ -1,0 +1,13 @@
+# Performance Benchmark Dockerfile
+FROM alpine:latest
+
+RUN apk add --no-cache \
+    apache2-utils \
+    curl \
+    wrk \
+    bash
+
+COPY docker/performance/benchmark.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/benchmark.sh
+
+CMD ["/usr/local/bin/benchmark.sh"]

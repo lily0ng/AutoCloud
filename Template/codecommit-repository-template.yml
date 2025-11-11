@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CodeCommit Repository Template'
+
+Parameters:
+  RepositoryName:
+    Type: String
+    Default: MyCodeCommitRepo
+  RepositoryDescription:
+    Type: String
+    Default: My CodeCommit Repository
+
+Resources:
+  CodeCommitRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: !Ref RepositoryName
+      RepositoryDescription: !Ref RepositoryDescription
+      Triggers:
+        - Name: EmailTrigger
+          DestinationArn: !Ref SNSTopic
+          Events:
+            - all
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${RepositoryName}-Notifications'
+
+Outputs:
+  RepositoryArn:
+    Value: !GetAtt CodeCommitRepository.Arn
+  CloneUrlHttp:
+    Value: !GetAtt CodeCommitRepository.CloneUrlHttp
+  CloneUrlSsh:
+    Value: !GetAtt CodeCommitRepository.CloneUrlSsh

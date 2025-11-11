@@ -1,0 +1,67 @@
+api_gateway:
+  endpoints:
+    rest:
+      enabled: true
+      version: "v1"
+      cors:
+        enabled: true
+        allowed_origins: ["*"]
+        allowed_methods: ["GET", "POST", "PUT", "DELETE"]
+        
+    graphql:
+      enabled: true
+      playground: true
+      introspection: false
+      
+  authentication:
+    jwt:
+      enabled: true
+      issuer: "https://auth.example.com"
+      audience: "api-gateway"
+      
+    api_key:
+      enabled: true
+      rotation_days: 90
+      
+  rate_limiting:
+    enabled: true
+    default_rate: 1000
+    burst: 50
+    
+    custom_limits:
+      - path: "/api/v1/users"
+        method: "POST"
+        rate: 100
+        burst: 20
+        
+  caching:
+    enabled: true
+    ttl_seconds: 300
+    size_mb: 512
+    
+    invalidation:
+      enabled: true
+      patterns:
+        - "/api/v1/products/*"
+        - "/api/v1/categories/*"
+        
+  monitoring:
+    metrics:
+      enabled: true
+      detailed_metrics: true
+      
+    logging:
+      access_logs: true
+      execution_logs: true
+      
+  security:
+    waf:
+      enabled: true
+      rules:
+        - sql_injection
+        - xss
+        - rate_limiting
+        
+    ssl_policy:
+      minimum_protocol: TLSv1.2
+      preferred_ciphers: true

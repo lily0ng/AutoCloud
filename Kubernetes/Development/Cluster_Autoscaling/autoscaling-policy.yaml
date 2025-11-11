@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-autoscaler-policy
+  namespace: kube-system
+data:
+  policy.json: |
+    {
+      "scaleDownUnneededTime": "10m0s",
+      "scaleDownDelayAfterAdd": "10m0s",
+      "scaleDownDelayAfterDelete": "10s",
+      "scaleDownDelayAfterFailure": "3m0s",
+      "scaleDownUnreadyTime": "20m0s",
+      "scaleDownUtilizationThreshold": 0.5,
+      "maxGracefulTerminationSec": 600,
+      "maxNodeProvisionTime": "15m0s",
+      "maxTotalUnreadyPercentage": 45,
+      "okTotalUnreadyCount": 3,
+      "maxEmptyBulkDelete": 10,
+      "skipNodesWithLocalStorage": true,
+      "skipNodesWithSystemPods": true,
+      "balanceSimilarNodeGroups": true,
+      "expander": "least-waste"
+    }

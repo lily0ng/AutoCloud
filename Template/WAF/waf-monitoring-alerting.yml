@@ -1,0 +1,154 @@
+---
+# WAF Monitoring and Alerting Configuration
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-waf-rules
+  namespace: monitoring
+data:
+  waf-alerts.yml: |
+    groups:
+    - name: waf_alerts
+      interval: 30s
+      rules:
+      - alert: HighWAFBlockRate
+        expr: rate(modsecurity_blocked_requests_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High WAF block rate detected"
+          description: "WAF is blocking {{ $value }} requests per second"
+      
+      - alert: SQLInjectionAttack
+        expr: increase(modsecurity_sqli_attacks_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SQL Injection attack detected"
+          description: "{{ $value }} SQL injection attempts in last 5 minutes"
+      
+      - alert: XSSAttack
+        expr: increase(modsecurity_xss_attacks_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "XSS attack detected"
+          description: "{{ $value }} XSS attempts in last 5 minutes"
+      
+      - alert: RCEAttack
+        expr: increase(modsecurity_rce_attacks_total[5m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RCE attack detected"
+          description: "{{ $value }} RCE attempts in last 5 minutes"
+      
+      - alert: WAFHighLatency
+        expr: histogram_quantile(0.95, rate(nginx_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WAF high latency"
+          description: "95th percentile latency is {{ $value }}s"
+      
+      - alert: WAFDown
+        expr: up{job="nginx-waf"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WAF is down"
+          description: "WAF instance {{ $labels.instance }} is down"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-waf-dashboard
+  namespace: monitoring
+data:
+  waf-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "WAF Security Dashboard",
+        "panels": [
+          {
+            "title": "Total Requests",
+            "targets": [{"expr": "sum(rate(nginx_http_requests_total[5m]))"}],
+            "type": "graph"
+          },
+          {
+            "title": "Blocked Requests",
+            "targets": [{"expr": "sum(rate(modsecurity_blocked_requests_total[5m]))"}],
+            "type": "graph"
+          },
+          {
+            "title": "Attack Types",
+            "targets": [
+              {"expr": "sum(rate(modsecurity_sqli_attacks_total[5m]))", "legendFormat": "SQL Injection"},
+              {"expr": "sum(rate(modsecurity_xss_attacks_total[5m]))", "legendFormat": "XSS"},
+              {"expr": "sum(rate(modsecurity_rce_attacks_total[5m]))", "legendFormat": "RCE"},
+              {"expr": "sum(rate(modsecurity_lfi_attacks_total[5m]))", "legendFormat": "LFI"}
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "Top Blocked IPs",
+            "targets": [{"expr": "topk(10, sum by (remote_addr) (modsecurity_blocked_requests_total))"}],
+            "type": "table"
+          },
+          {
+            "title": "WAF Response Time",
+            "targets": [{"expr": "histogram_quantile(0.95, rate(nginx_http_request_duration_seconds_bucket[5m]))"}],
+            "type": "graph"
+          },
+          {
+            "title": "Geographic Distribution",
+            "targets": [{"expr": "sum by (country) (modsecurity_requests_by_country)"}],
+            "type": "piechart"
+          }
+        ]
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-waf-config
+  namespace: logging
+data:
+  fluent.conf: |
+    <source>
+      @type tail
+      path /var/log/modsec_audit.log
+      pos_file /var/log/modsec_audit.log.pos
+      tag waf.audit
+      <parse>
+        @type json
+      </parse>
+    </source>
+    
+    <filter waf.audit>
+      @type record_transformer
+      <record>
+        severity ${record["severity"]}
+        attack_type ${record["tags"]}
+        client_ip ${record["client_ip"]}
+        request_uri ${record["request_uri"]}
+      </record>
+    </filter>
+    
+    <match waf.audit>
+      @type elasticsearch
+      host elasticsearch.logging.svc.cluster.local
+      port 9200
+      index_name waf-audit
+      type_name _doc
+      logstash_format true
+      logstash_prefix waf-audit
+    </match>

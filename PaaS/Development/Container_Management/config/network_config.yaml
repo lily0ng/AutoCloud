@@ -1,0 +1,38 @@
+networking:
+  vpc:
+    cidr: "10.0.0.0/16"
+    subnets:
+      public:
+        - cidr: "10.0.1.0/24"
+          az: "a"
+        - cidr: "10.0.2.0/24"
+          az: "b"
+      private:
+        - cidr: "10.0.10.0/24"
+          az: "a"
+        - cidr: "10.0.11.0/24"
+          az: "b"
+
+  dns:
+    provider: route53
+    zones:
+      - name: "container.example.com"
+        type: public
+    
+  load_balancer:
+    type: application
+    ports:
+      - 80
+      - 443
+    ssl_policy: "ELBSecurityPolicy-TLS-1-2-2017-01"
+    
+  security_groups:
+    default:
+      ingress:
+        - protocol: tcp
+          ports: [80, 443]
+          source: "0.0.0.0/0"
+      egress:
+        - protocol: -1
+          ports: [-1]
+          source: "0.0.0.0/0"

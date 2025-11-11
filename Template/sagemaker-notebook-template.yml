@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon SageMaker Notebook Instance Template'
+
+Parameters:
+  NotebookInstanceName:
+    Type: String
+    Default: MySageMakerNotebook
+  InstanceType:
+    Type: String
+    Default: ml.t3.medium
+    AllowedValues:
+      - ml.t3.medium
+      - ml.t3.large
+      - ml.t3.xlarge
+      - ml.m5.xlarge
+      - ml.m5.2xlarge
+
+Resources:
+  NotebookInstance:
+    Type: AWS::SageMaker::NotebookInstance
+    Properties:
+      NotebookInstanceName: !Ref NotebookInstanceName
+      InstanceType: !Ref InstanceType
+      RoleArn: !GetAtt SageMakerRole.Arn
+      VolumeSizeInGB: 20
+      Tags:
+        - Key: Name
+          Value: !Ref NotebookInstanceName
+
+  SageMakerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+
+Outputs:
+  NotebookInstanceName:
+    Value: !GetAtt NotebookInstance.NotebookInstanceName
+  NotebookURL:
+    Value: !Sub 'https://${NotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws'

@@ -1,0 +1,51 @@
+network:
+  vpc:
+    cidr: "10.0.0.0/16"
+    regions:
+      - name: us-east-1
+        cidr: "10.0.0.0/20"
+      - name: us-west-2
+        cidr: "10.0.16.0/20"
+        
+  subnets:
+    public:
+      - cidr: "10.0.0.0/24"
+        az: "us-east-1a"
+      - cidr: "10.0.1.0/24"
+        az: "us-east-1b"
+    private:
+      - cidr: "10.0.2.0/24"
+        az: "us-east-1a"
+      - cidr: "10.0.3.0/24"
+        az: "us-east-1b"
+        
+  routing:
+    internet_gateway: true
+    nat_gateway:
+      enabled: true
+      highly_available: true
+      
+  security:
+    flow_logs:
+      enabled: true
+      retention_days: 30
+      
+    network_acls:
+      - name: web_tier
+        inbound:
+          - protocol: tcp
+            ports: [80, 443]
+            source: "0.0.0.0/0"
+        outbound:
+          - protocol: -1
+            ports: all
+            destination: "0.0.0.0/0"
+            
+  dns:
+    private_hosted_zones:
+      - name: "internal.example.com"
+        vpc_association: true
+    
+    service_discovery:
+      namespace: "services.internal"
+      dns_ttl: 300

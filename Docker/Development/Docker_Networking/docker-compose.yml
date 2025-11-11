@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    networks:
+      frontend:
+        ipv4_address: 172.20.0.2
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+  api:
+    image: node:latest
+    ports:
+      - "3000:3000"
+    networks:
+      frontend:
+        ipv4_address: 172.20.0.3
+      backend:
+        ipv4_address: 172.21.0.2
+    environment:
+      - HTTP_PROXY=http://proxy.example.com:8080
+      - HTTPS_PROXY=https://proxy.example.com:8080
+      - NO_PROXY=localhost,127.0.0.1
+
+  db:
+    image: postgres:latest
+    networks:
+      backend:
+        ipv4_address: 172.21.0.3
+    environment:
+      POSTGRES_PASSWORD: example
+
+networks:
+  frontend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+  backend:
+    driver: bridge
+    internal: true  # No internet access, only internal communication
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1

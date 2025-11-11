@@ -1,0 +1,111 @@
+---
+# Web Server Security Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-security-config
+  namespace: web-system
+data:
+  security.conf: |
+    # Security Headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    
+    # Hide server version
+    server_tokens off;
+    
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+    limit_conn_zone $binary_remote_addr zone=addr:10m;
+    
+    # Block suspicious user agents
+    map $http_user_agent $bad_bot {
+        default 0;
+        ~*^$ 1;
+        ~*bot 1;
+        ~*spider 1;
+        ~*crawler 1;
+        ~*nikto 1;
+        ~*sqlmap 1;
+    }
+    
+    # Block bad requests
+    if ($bad_bot) {
+        return 403;
+    }
+    
+    # Prevent clickjacking
+    if ($http_referer ~* (babes|casino|click|diamond|forsale|girl|jewelry|love|nudit|organic|poker|porn|poweroversoftware|sex|teen|video|webcam|zippo)) {
+        return 403;
+    }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-server-netpol
+  namespace: web-system
+spec:
+  podSelector:
+    matchLabels:
+      app: web-server
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 8443
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: database
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+---
+apiVersion: policy/v1
+kind: PodSecurityPolicy
+metadata:
+  name: web-server-psp
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: true

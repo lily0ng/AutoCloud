@@ -1,0 +1,49 @@
+# GitLab Webhook Configurations
+
+webhooks:
+  # Deployment webhook
+  - url: https://deploy.yourdomain.com/webhook
+    token: your-secure-token
+    push_events: true
+    merge_requests_events: true
+    pipeline_events: true
+    deployment_events: true
+    triggers:
+      - branch: main
+        environment: production
+      - branch: staging
+        environment: staging
+
+  # Monitoring webhook
+  - url: https://monitor.yourdomain.com/gitlab-events
+    token: your-monitor-token
+    push_events: true
+    pipeline_events: true
+    job_events: true
+
+  # Security scanning webhook
+  - url: https://security.yourdomain.com/scan
+    token: your-security-token
+    push_events: true
+    tag_push_events: true
+    merge_requests_events: true
+
+  # Issue tracking integration
+  - url: https://jira.yourdomain.com/gitlab-webhook
+    token: your-jira-token
+    issues_events: true
+    merge_requests_events: true
+    note_events: true
+
+notification_settings:
+  email:
+    enabled: true
+    recipients:
+      - devops@yourdomain.com
+      - security@yourdomain.com
+  slack:
+    enabled: true
+    webhook_url: https://hooks.slack.com/services/your-webhook-url
+    channels:
+      - "#deployments"
+      - "#security-alerts"

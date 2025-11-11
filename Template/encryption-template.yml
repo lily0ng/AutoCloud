@@ -1,0 +1,211 @@
+---
+# Encryption Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: encryption-config
+  namespace: security
+data:
+  encryption-config.yaml: |
+    apiVersion: apiserver.config.k8s.io/v1
+    kind: EncryptionConfiguration
+    resources:
+    - resources:
+      - secrets
+      providers:
+      - aescbc:
+          keys:
+          - name: key1
+            secret: <base64-encoded-secret>
+      - identity: {}
+    - resources:
+      - configmaps
+      providers:
+      - aescbc:
+          keys:
+          - name: key1
+            secret: <base64-encoded-secret>
+      - identity: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tls-certificate
+  namespace: production
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTi... # Base64 encoded certificate
+  tls.key: LS0tLS1CRUdJTi... # Base64 encoded private key
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ssl-config
+  namespace: security
+data:
+  ssl.conf: |
+    # SSL/TLS Configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    
+    # HSTS
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-config
+  namespace: security
+data:
+  vault.hcl: |
+    storage "file" {
+      path = "/vault/data"
+    }
+    
+    listener "tcp" {
+      address = "0.0.0.0:8200"
+      tls_disable = 0
+      tls_cert_file = "/vault/tls/tls.crt"
+      tls_key_file = "/vault/tls/tls.key"
+    }
+    
+    api_addr = "https://vault.example.com:8200"
+    cluster_addr = "https://vault.example.com:8201"
+    ui = true
+    
+    seal "awskms" {
+      region = "us-east-1"
+      kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+    }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vault
+  namespace: security
+spec:
+  serviceName: vault
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      containers:
+      - name: vault
+        image: vault:latest
+        args:
+        - server
+        - -config=/vault/config/vault.hcl
+        ports:
+        - containerPort: 8200
+          name: api
+        - containerPort: 8201
+          name: cluster
+        env:
+        - name: VAULT_ADDR
+          value: "https://127.0.0.1:8200"
+        - name: VAULT_API_ADDR
+          value: "https://vault.example.com:8200"
+        - name: VAULT_CLUSTER_ADDR
+          value: "https://$(POD_IP):8201"
+        volumeMounts:
+        - name: config
+          mountPath: /vault/config
+        - name: data
+          mountPath: /vault/data
+        - name: tls
+          mountPath: /vault/tls
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        securityContext:
+          capabilities:
+            add:
+            - IPC_LOCK
+      volumes:
+      - name: config
+        configMap:
+          name: vault-config
+      - name: tls
+        secret:
+          secretName: vault-tls
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sealed-secrets-config
+  namespace: security
+data:
+  controller.yaml: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: sealed-secrets-controller
+      namespace: kube-system
+    spec:
+      ports:
+      - port: 8080
+        targetPort: 8080
+      selector:
+        name: sealed-secrets-controller
+---
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: vault-backend
+  namespace: production
+spec:
+  provider:
+    vault:
+      server: "https://vault.example.com:8200"
+      path: "secret"
+      version: "v2"
+      auth:
+        kubernetes:
+          mountPath: "kubernetes"
+          role: "production-role"
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: database-credentials
+  namespace: production
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: SecretStore
+  target:
+    name: db-credentials
+    creationPolicy: Owner
+  data:
+  - secretKey: username
+    remoteRef:
+      key: database/production
+      property: username
+  - secretKey: password
+    remoteRef:
+      key: database/production
+      property: password

@@ -1,0 +1,65 @@
+apiVersion: 1
+
+datasources:
+  # Linux Monitoring
+  - name: Linux_Metrics
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    jsonData:
+      timeInterval: 10s
+      queryTimeout: "60s"
+      httpMethod: POST
+
+  # Windows Server Monitoring
+  - name: Windows_Metrics
+    type: prometheus
+    access: proxy
+    url: http://windows-exporter:9182
+    jsonData:
+      timeInterval: 15s
+      queryTimeout: "60s"
+
+  # MacOS Monitoring
+  - name: MacOS_Metrics
+    type: prometheus
+    access: proxy
+    url: http://macos-exporter:9110
+    jsonData:
+      timeInterval: 15s
+
+  # Ubuntu Server Monitoring
+  - name: Ubuntu_Server_Metrics
+    type: prometheus
+    access: proxy
+    url: http://ubuntu-exporter:9100
+    jsonData:
+      timeInterval: 10s
+
+  # CentOS Monitoring
+  - name: CentOS_Metrics
+    type: prometheus
+    access: proxy
+    url: http://centos-exporter:9100
+    jsonData:
+      timeInterval: 10s
+
+  # Cloud Monitoring
+  - name: AWS_CloudWatch
+    type: cloudwatch
+    jsonData:
+      authType: credentials
+      defaultRegion: us-east-1
+
+  - name: Azure_Monitor
+    type: grafana-azure-monitor-datasource
+    jsonData:
+      cloudName: azuremonitor
+      subscriptionId: your-subscription-id
+      tenantId: your-tenant-id
+
+  - name: GCP_Monitoring
+    type: stackdriver
+    jsonData:
+      authenticationType: jwt
+      defaultProject: your-project-id

@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS DMS Replication Instance Template'
+
+Parameters:
+  ReplicationInstanceIdentifier:
+    Type: String
+    Default: my-dms-instance
+  ReplicationInstanceClass:
+    Type: String
+    Default: dms.t3.medium
+  AllocatedStorage:
+    Type: Number
+    Default: 50
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  DMSSubnetGroup:
+    Type: AWS::DMS::ReplicationSubnetGroup
+    Properties:
+      ReplicationSubnetGroupIdentifier: !Sub '${ReplicationInstanceIdentifier}-subnet-group'
+      ReplicationSubnetGroupDescription: DMS Subnet Group
+      SubnetIds: !Ref SubnetIds
+
+  DMSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for DMS
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+
+  ReplicationInstance:
+    Type: AWS::DMS::ReplicationInstance
+    Properties:
+      ReplicationInstanceIdentifier: !Ref ReplicationInstanceIdentifier
+      ReplicationInstanceClass: !Ref ReplicationInstanceClass
+      AllocatedStorage: !Ref AllocatedStorage
+      VpcSecurityGroupIds:
+        - !Ref DMSSecurityGroup
+      ReplicationSubnetGroupIdentifier: !Ref DMSSubnetGroup
+      PubliclyAccessible: false
+      MultiAZ: false
+
+Outputs:
+  ReplicationInstanceArn:
+    Value: !Ref ReplicationInstance
+  ReplicationInstanceEndpoint:
+    Value: !GetAtt ReplicationInstance.ReplicationInstancePublicIpAddresses

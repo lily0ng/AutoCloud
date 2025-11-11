@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon RDS Oracle Database Template'
+
+Parameters:
+  DBInstanceIdentifier:
+    Type: String
+    Default: oracle-database
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.medium
+
+  EngineVersion:
+    Type: String
+    Default: '19.0.0.0.ru-2023-10.rur-2023-10.r1'
+
+  LicenseModel:
+    Type: String
+    Default: license-included
+    AllowedValues:
+      - license-included
+      - bring-your-own-license
+
+  MasterUsername:
+    Type: String
+    Default: admin
+    NoEcho: true
+
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+
+  AllocatedStorage:
+    Type: Number
+    Default: 20
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Oracle RDS
+      SubnetIds: !Ref SubnetIds
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS Oracle
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 1521
+          ToPort: 1521
+          CidrIp: 0.0.0.0/0
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: oracle-ee
+      EngineVersion: !Ref EngineVersion
+      LicenseModel: !Ref LicenseModel
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      AllocatedStorage: !Ref AllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      BackupRetentionPeriod: 7
+
+Outputs:
+  DBEndpoint:
+    Value: !GetAtt DBInstance.Endpoint.Address

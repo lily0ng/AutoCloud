@@ -1,0 +1,65 @@
+# Drone CI Template
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: install
+    image: node:18
+    commands:
+      - npm ci
+  
+  - name: lint
+    image: node:18
+    commands:
+      - npm run lint
+    depends_on:
+      - install
+  
+  - name: test
+    image: node:18
+    commands:
+      - npm run test
+    depends_on:
+      - install
+  
+  - name: build-docker
+    image: plugins/docker
+    settings:
+      repo: myregistry/myapp
+      tags:
+        - ${DRONE_COMMIT_SHA:0:8}
+        - latest
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    depends_on:
+      - lint
+      - test
+    when:
+      branch:
+        - main
+        - develop
+  
+  - name: deploy-k8s
+    image: bitnami/kubectl
+    commands:
+      - kubectl set image deployment/myapp myapp=myregistry/myapp:${DRONE_COMMIT_SHA:0:8}
+      - kubectl rollout status deployment/myapp
+    environment:
+      KUBECONFIG:
+        from_secret: kubeconfig
+    depends_on:
+      - build-docker
+    when:
+      branch:
+        - main
+
+trigger:
+  branch:
+    - main
+    - develop
+  event:
+    - push
+    - pull_request

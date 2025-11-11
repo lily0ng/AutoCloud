@@ -1,0 +1,46 @@
+version: '3.8'
+
+networks:
+  frontend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+  overlay_net:
+    driver: overlay
+    attachable: true
+
+services:
+  web:
+    image: nginx:latest
+    networks:
+      - frontend
+    ports:
+      - "80:80"
+    deploy:
+      replicas: 2
+
+  api:
+    image: node:16-alpine
+    networks:
+      - frontend
+      - backend
+    deploy:
+      replicas: 2
+
+  db:
+    image: postgres:13
+    networks:
+      - backend
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:

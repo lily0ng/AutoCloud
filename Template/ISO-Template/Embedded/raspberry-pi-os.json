@@ -1,0 +1,29 @@
+{
+  "name": "Raspberry Pi OS",
+  "version": "2023-12-05",
+  "type": "embedded",
+  "distribution": "raspbian",
+  "architecture": "arm64",
+  "image_url": "https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2023-12-06/2023-12-05-raspios-bookworm-arm64.img.xz",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "device": "Raspberry Pi 3/4/5",
+    "min_storage": "8GB"
+  },
+  "configuration": {
+    "hostname": "raspberrypi",
+    "username": "pi",
+    "password": "raspberry",
+    "wifi": {
+      "ssid": "your_ssid",
+      "password": "your_password",
+      "country": "US"
+    },
+    "ssh": {
+      "enabled": true
+    },
+    "locale": "en_US.UTF-8",
+    "timezone": "America/New_York",
+    "keyboard": "us"
+  }
+}

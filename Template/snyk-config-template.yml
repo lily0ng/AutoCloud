@@ -1,0 +1,23 @@
+# Snyk Configuration Template
+version: v1.22.0
+exclude:
+  global:
+    - node_modules/**
+    - test/**
+    - tests/**
+    - '**/*.test.js'
+
+language-settings:
+  javascript:
+    ignoreUnknownCA: false
+    
+patch:
+  'npm:lodash:20180130':
+    - lodash:
+        patched: '2018-01-30T00:00:00.000Z'
+
+ignore:
+  'SNYK-JS-LODASH-590103':
+    - '*':
+        reason: 'Not applicable to our use case'
+        expires: '2024-12-31'

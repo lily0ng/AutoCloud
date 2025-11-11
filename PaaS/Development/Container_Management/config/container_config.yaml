@@ -1,0 +1,32 @@
+container_configurations:
+  base_images:
+    - name: nginx
+      version: latest
+      port: 80
+    - name: python
+      version: "3.9"
+      port: 8000
+    - name: node
+      version: "16"
+      port: 3000
+    - name: postgres
+      version: "13"
+      port: 5432
+
+  resource_limits:
+    small:
+      cpu: "1"
+      memory: "1Gi"
+    medium:
+      cpu: "2"
+      memory: "2Gi"
+    large:
+      cpu: "4"
+      memory: "4Gi"
+
+  networking:
+    default_network: "container-net"
+    subnet_mask: "172.18.0.0/16"
+    dns_servers:
+      - "8.8.8.8"
+      - "8.8.4.4"

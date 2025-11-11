@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alpine-deployment
+  labels:
+    app: alpine
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: alpine
+  template:
+    metadata:
+      labels:
+        app: alpine
+    spec:
+      containers:
+      - name: alpine
+        image: alpine:3.15
+        command: ["/bin/sleep", "3650d"]
+        envFrom:
+        - configMapRef:
+            name: alpine-config
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+          limits:
+            memory: "64Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: alpine-storage
+          mountPath: /data
+      volumes:
+      - name: alpine-storage
+        emptyDir: {}

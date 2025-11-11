@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon MQ Broker Template'
+
+Parameters:
+  BrokerName:
+    Type: String
+    Default: MyMQBroker
+  BrokerInstanceType:
+    Type: String
+    Default: mq.t3.micro
+  EngineType:
+    Type: String
+    Default: ACTIVEMQ
+    AllowedValues:
+      - ACTIVEMQ
+      - RABBITMQ
+  EngineVersion:
+    Type: String
+    Default: 5.17.6
+  Username:
+    Type: String
+    Default: admin
+    NoEcho: true
+  Password:
+    Type: String
+    NoEcho: true
+    MinLength: 12
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  MQSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Amazon MQ
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 61617
+          ToPort: 61617
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8162
+          ToPort: 8162
+          CidrIp: 0.0.0.0/0
+
+  MQBroker:
+    Type: AWS::AmazonMQ::Broker
+    Properties:
+      BrokerName: !Ref BrokerName
+      EngineType: !Ref EngineType
+      EngineVersion: !Ref EngineVersion
+      HostInstanceType: !Ref BrokerInstanceType
+      DeploymentMode: SINGLE_INSTANCE
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
+      Users:
+        - Username: !Ref Username
+          Password: !Ref Password
+      SubnetIds:
+        - !Select [0, !Ref SubnetIds]
+      SecurityGroups:
+        - !Ref MQSecurityGroup
+
+Outputs:
+  BrokerId:
+    Value: !Ref MQBroker
+  BrokerArn:
+    Value: !GetAtt MQBroker.Arn
+  ConsoleURL:
+    Value: !Join ['', !GetAtt MQBroker.Instances.0.ConsoleURL]

@@ -1,0 +1,46 @@
+{
+  "name": "Arch Linux",
+  "version": "rolling",
+  "type": "linux",
+  "distribution": "arch",
+  "architecture": "x86_64",
+  "iso_url": "https://mirror.rackspace.com/archlinux/iso/latest/archlinux-x86_64.iso",
+  "checksum": "sha256:checksum_here",
+  "boot_command": [
+    "<enter><wait10>",
+    "curl -O http://{{ .HTTPIP }}:{{ .HTTPPort }}/install.sh<enter><wait>",
+    "bash install.sh<enter>"
+  ],
+  "system_requirements": {
+    "min_ram": "512",
+    "min_disk": "20",
+    "min_cpu": "1"
+  },
+  "install_script": {
+    "partitioning": [
+      "parted -s /dev/sda mklabel msdos",
+      "parted -s /dev/sda mkpart primary ext4 1MiB 100%",
+      "mkfs.ext4 /dev/sda1",
+      "mount /dev/sda1 /mnt"
+    ],
+    "base_install": [
+      "pacstrap /mnt base linux linux-firmware",
+      "genfstab -U /mnt >> /mnt/etc/fstab"
+    ],
+    "chroot_commands": [
+      "ln -sf /usr/share/zoneinfo/UTC /etc/localtime",
+      "hwclock --systohc",
+      "echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen",
+      "locale-gen",
+      "echo 'LANG=en_US.UTF-8' > /etc/locale.conf",
+      "echo 'archlinux' > /etc/hostname",
+      "pacman -S --noconfirm grub openssh vim",
+      "grub-install --target=i386-pc /dev/sda",
+      "grub-mkconfig -o /boot/grub/grub.cfg",
+      "systemctl enable sshd",
+      "useradd -m -G wheel arch",
+      "echo 'arch:password' | chpasswd",
+      "echo 'root:password' | chpasswd"
+    ]
+  }
+}

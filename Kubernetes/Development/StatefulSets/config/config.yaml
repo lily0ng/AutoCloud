@@ -1,0 +1,19 @@
+environment: production
+statefulset:
+  name: app-statefulset
+  replicas: 3
+  image: nginx:1.21
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+storage:
+  storageClass: standard
+  size: 1Gi
+  accessMode: ReadWriteOnce
+networking:
+  serviceName: app-headless
+  port: 80

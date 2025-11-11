@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Backup Plan Template'
+
+Parameters:
+  BackupPlanName:
+    Type: String
+    Default: MyBackupPlan
+
+  BackupVaultName:
+    Type: String
+    Default: MyBackupVault
+
+Resources:
+  BackupVault:
+    Type: AWS::Backup::BackupVault
+    Properties:
+      BackupVaultName: !Ref BackupVaultName
+      EncryptionKeyArn: !GetAtt BackupKey.Arn
+
+  BackupKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for backup vault encryption
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: Allow Backup Service
+            Effect: Allow
+            Principal:
+              Service: backup.amazonaws.com
+            Action:
+              - 'kms:CreateGrant'
+              - 'kms:GenerateDataKey'
+              - 'kms:Decrypt'
+            Resource: '*'
+
+  BackupPlan:
+    Type: AWS::Backup::BackupPlan
+    Properties:
+      BackupPlan:
+        BackupPlanName: !Ref BackupPlanName
+        BackupPlanRule:
+          - RuleName: DailyBackup
+            TargetBackupVault: !Ref BackupVault
+            ScheduleExpression: 'cron(0 2 * * ? *)'
+            StartWindowMinutes: 60
+            CompletionWindowMinutes: 120
+            Lifecycle:
+              DeleteAfterDays: 30
+              MoveToColdStorageAfterDays: 7
+          - RuleName: WeeklyBackup
+            TargetBackupVault: !Ref BackupVault
+            ScheduleExpression: 'cron(0 3 ? * SUN *)'
+            StartWindowMinutes: 60
+            CompletionWindowMinutes: 180
+            Lifecycle:
+              DeleteAfterDays: 90
+
+  BackupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: backup.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup
+        - arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores
+
+  BackupSelection:
+    Type: AWS::Backup::BackupSelection
+    Properties:
+      BackupPlanId: !Ref BackupPlan
+      BackupSelection:
+        SelectionName: AllResources
+        IamRoleArn: !GetAtt BackupRole.Arn
+        Resources:
+          - '*'
+        Conditions:
+          StringEquals:
+            - ConditionKey: 'aws:ResourceTag/Backup'
+              ConditionValue: 'true'
+
+Outputs:
+  BackupPlanId:
+    Value: !Ref BackupPlan
+  BackupVaultArn:
+    Value: !GetAtt BackupVault.BackupVaultArn

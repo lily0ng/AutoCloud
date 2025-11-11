@@ -1,0 +1,127 @@
+---
+# Code Quality Template
+# SonarQube and code analysis configuration
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sonarqube-config
+  namespace: cicd
+data:
+  sonar-project.properties: |
+    sonar.projectKey=myapp
+    sonar.projectName=My Application
+    sonar.projectVersion=1.0
+    sonar.sources=src
+    sonar.tests=tests
+    sonar.language=js
+    sonar.sourceEncoding=UTF-8
+    
+    # Coverage
+    sonar.javascript.lcov.reportPaths=coverage/lcov.info
+    sonar.coverage.exclusions=**/*.test.js,**/*.spec.js
+    
+    # Quality Gates
+    sonar.qualitygate.wait=true
+    sonar.qualitygate.timeout=300
+    
+    # Code Smells
+    sonar.issue.ignore.multicriteria=e1,e2
+    sonar.issue.ignore.multicriteria.e1.ruleKey=javascript:S1192
+    sonar.issue.ignore.multicriteria.e1.resourceKey=**/*.test.js
+    
+  .eslintrc.json: |
+    {
+      "env": {
+        "browser": true,
+        "es2021": true,
+        "node": true
+      },
+      "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:security/recommended",
+        "prettier"
+      ],
+      "parser": "@typescript-eslint/parser",
+      "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+      },
+      "plugins": ["@typescript-eslint", "security"],
+      "rules": {
+        "no-console": "warn",
+        "no-unused-vars": "error",
+        "prefer-const": "error",
+        "no-var": "error"
+      }
+    }
+  
+  .prettierrc: |
+    {
+      "semi": true,
+      "trailingComma": "es5",
+      "singleQuote": true,
+      "printWidth": 100,
+      "tabWidth": 2
+    }
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: sonarqube-scanner
+  namespace: cicd
+spec:
+  params:
+    - name: sonar-host-url
+      default: https://sonarqube.example.com
+  workspaces:
+    - name: source
+  steps:
+    - name: scan
+      image: sonarsource/sonar-scanner-cli:latest
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: SONAR_HOST_URL
+          value: $(params.sonar-host-url)
+        - name: SONAR_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-token
+              key: token
+      script: |
+        #!/bin/sh
+        sonar-scanner \
+          -Dsonar.host.url=${SONAR_HOST_URL} \
+          -Dsonar.login=${SONAR_TOKEN}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: code-quality-scan
+  namespace: cicd
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: scanner
+            image: sonarsource/sonar-scanner-cli:latest
+            command:
+            - sh
+            - -c
+            - |
+              git clone https://github.com/example/repo.git /workspace
+              cd /workspace
+              sonar-scanner
+            env:
+            - name: SONAR_HOST_URL
+              value: https://sonarqube.example.com
+            - name: SONAR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: sonarqube-token
+                  key: token
+          restartPolicy: OnFailure

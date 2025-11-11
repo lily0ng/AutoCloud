@@ -1,0 +1,56 @@
+{
+  "name": "Windows 10 Enterprise",
+  "version": "22H2",
+  "type": "windows",
+  "edition": "Enterprise",
+  "architecture": "x86_64",
+  "iso_url": "https://software-download.microsoft.com/download/Windows_10_Enterprise.iso",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "32",
+    "min_cpu": "1"
+  },
+  "autounattend": {
+    "settings": {
+      "windowsPE": {
+        "setupUILanguage": "en-US",
+        "inputLocale": "en-US"
+      },
+      "diskConfiguration": {
+        "disk": {
+          "diskID": "0",
+          "willWipeDisk": true,
+          "createPartitions": {
+            "system": {
+              "order": "1",
+              "size": "350",
+              "type": "Primary"
+            },
+            "windows": {
+              "order": "2",
+              "extend": true,
+              "type": "Primary"
+            }
+          }
+        }
+      },
+      "imageInstall": {
+        "osImage": {
+          "installFrom": {
+            "metaData": {
+              "key": "/IMAGE/NAME",
+              "value": "Windows 10 Enterprise"
+            }
+          }
+        }
+      }
+    },
+    "oobeSystem": {
+      "hideEULAPage": true,
+      "networkLocation": "Work",
+      "protectYourPC": "3",
+      "timeZone": "UTC"
+    }
+  }
+}

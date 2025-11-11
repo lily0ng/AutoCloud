@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${NAMESPACE}
+  labels:
+    name: ${NAMESPACE}
+    environment: ${ENVIRONMENT}
+    team: ${TEAM_NAME}
+    cost-center: ${COST_CENTER}
+  annotations:
+    description: "${NAMESPACE_DESCRIPTION}"
+    owner: "${OWNER_EMAIL}"
+    created-by: "autocloud"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ${NAMESPACE}-compute-quota
+  namespace: ${NAMESPACE}
+spec:
+  hard:
+    requests.cpu: "${CPU_QUOTA}"
+    requests.memory: ${MEMORY_QUOTA}
+    limits.cpu: "${CPU_LIMIT_QUOTA}"
+    limits.memory: ${MEMORY_LIMIT_QUOTA}
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ${NAMESPACE}-limits
+  namespace: ${NAMESPACE}
+spec:
+  limits:
+  - max:
+      cpu: "${MAX_CPU_PER_CONTAINER}"
+      memory: ${MAX_MEMORY_PER_CONTAINER}
+    min:
+      cpu: "${MIN_CPU_PER_CONTAINER}"
+      memory: ${MIN_MEMORY_PER_CONTAINER}
+    default:
+      cpu: "${DEFAULT_CPU}"
+      memory: ${DEFAULT_MEMORY}
+    defaultRequest:
+      cpu: "${DEFAULT_REQUEST_CPU}"
+      memory: ${DEFAULT_REQUEST_MEMORY}
+    type: Container
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ${NAMESPACE}-default-deny
+  namespace: ${NAMESPACE}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress

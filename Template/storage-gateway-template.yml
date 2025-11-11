@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Storage Gateway Template'
+
+Parameters:
+  GatewayName:
+    Type: String
+    Default: MyStorageGateway
+
+  GatewayType:
+    Type: String
+    Default: FILE_S3
+    AllowedValues:
+      - FILE_S3
+      - FILE_FSX_SMB
+      - VTL
+      - CACHED
+      - STORED
+
+  GatewayTimezone:
+    Type: String
+    Default: GMT
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+
+Resources:
+  StorageGateway:
+    Type: AWS::StorageGateway::Gateway
+    Properties:
+      GatewayName: !Ref GatewayName
+      GatewayType: !Ref GatewayType
+      GatewayTimezone: !Ref GatewayTimezone
+      Tags:
+        - Key: Name
+          Value: !Ref GatewayName
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${GatewayName}-storage-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  GatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: storagegateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+Outputs:
+  GatewayId:
+    Value: !Ref StorageGateway
+  GatewayArn:
+    Value: !GetAtt StorageGateway.GatewayARN

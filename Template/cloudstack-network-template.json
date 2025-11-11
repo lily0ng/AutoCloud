@@ -1,0 +1,82 @@
+{
+  "name": "CloudStack Network Template",
+  "description": "Template for creating isolated networks in CloudStack",
+  "version": "1.0",
+  "parameters": {
+    "networkName": {
+      "type": "string",
+      "description": "Name of the network",
+      "required": true
+    },
+    "displayText": {
+      "type": "string",
+      "description": "Display text for the network",
+      "required": true
+    },
+    "networkOffering": {
+      "type": "string",
+      "description": "Network offering ID",
+      "required": true
+    },
+    "zoneId": {
+      "type": "string",
+      "description": "Zone ID",
+      "required": true
+    },
+    "gateway": {
+      "type": "string",
+      "description": "Network gateway",
+      "default": "10.0.0.1"
+    },
+    "netmask": {
+      "type": "string",
+      "description": "Network netmask",
+      "default": "255.255.255.0"
+    },
+    "startIp": {
+      "type": "string",
+      "description": "Start IP of the range",
+      "default": "10.0.0.10"
+    },
+    "endIp": {
+      "type": "string",
+      "description": "End IP of the range",
+      "default": "10.0.0.250"
+    },
+    "vlan": {
+      "type": "string",
+      "description": "VLAN ID",
+      "required": false
+    }
+  },
+  "resources": {
+    "network": {
+      "type": "CloudStack::Network::Network",
+      "properties": {
+        "name": "${networkName}",
+        "displayText": "${displayText}",
+        "networkOfferingId": "${networkOffering}",
+        "zoneId": "${zoneId}",
+        "gateway": "${gateway}",
+        "netmask": "${netmask}",
+        "startIp": "${startIp}",
+        "endIp": "${endIp}",
+        "vlan": "${vlan}"
+      }
+    }
+  },
+  "outputs": {
+    "networkId": {
+      "value": "${network.id}",
+      "description": "Network ID"
+    },
+    "cidr": {
+      "value": "${network.cidr}",
+      "description": "Network CIDR"
+    },
+    "gateway": {
+      "value": "${network.gateway}",
+      "description": "Network gateway"
+    }
+  }
+}

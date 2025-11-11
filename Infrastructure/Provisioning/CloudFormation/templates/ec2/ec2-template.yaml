@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'EC2 instance template with multiple OS options'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name
+    Type: String
+    Default: Development
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t3.micro
+      - t3.small
+
+  OSType:
+    Description: Operating System Type
+    Type: String
+    Default: AmazonLinux2
+    AllowedValues:
+      - AmazonLinux2
+      - Ubuntu
+      - RHEL
+      - Windows
+      - CentOS
+
+  VolumeSize:
+    Description: Size of the root volume in GB
+    Type: Number
+    Default: 30
+    MinValue: 8
+    MaxValue: 100
+
+Mappings:
+  OSMap:
+    AmazonLinux2:
+      AMI: ami-0cff7528ff583bf9a
+    Ubuntu:
+      AMI: ami-0261755bbcb8c4a84
+    RHEL:
+      AMI: ami-0b0af3577fe5e3532
+    CentOS:
+      AMI: ami-0686851c4e7b1a8e1
+    Windows:
+      AMI: ami-0d80714a054d3360c
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !FindInMap [OSMap, !Ref OSType, AMI]
+      SecurityGroupIds: 
+        - !Ref InstanceSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-${OSType}-Instance
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+            VolumeType: gp3
+            DeleteOnTermination: true
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and RDP access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-${OSType}-SG
+
+Outputs:
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub ${EnvironmentName}-${OSType}-InstanceId
+
+  PublicIP:
+    Description: Public IP address of the instance
+    Value: !GetAtt EC2Instance.PublicIp
+    Export:
+      Name: !Sub ${EnvironmentName}-${OSType}-PublicIP
+
+  SecurityGroupId:
+    Description: Security Group ID
+    Value: !Ref InstanceSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-${OSType}-SecurityGroupId

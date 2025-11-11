@@ -1,0 +1,28 @@
+{
+    "Parameters": {
+        "EnvironmentName": "Production",
+        "InstanceType": "t3.micro",
+        "OSType": "AmazonLinux2",
+        "VolumeSize": 30
+    },
+    "InstanceConfigs": {
+        "Development": {
+            "InstanceType": "t2.micro",
+            "VolumeSize": 20
+        },
+        "Staging": {
+            "InstanceType": "t3.small",
+            "VolumeSize": 40
+        },
+        "Production": {
+            "InstanceType": "t3.medium",
+            "VolumeSize": 100
+        }
+    },
+    "Tags": {
+        "Project": "WebApp",
+        "Environment": "Production",
+        "Owner": "DevOps-Team",
+        "CostCenter": "IT-Applications"
+    }
+}

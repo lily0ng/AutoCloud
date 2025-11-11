@@ -1,0 +1,125 @@
+platform: aws
+regions:
+  primary: "us-east-1"
+  dr: "us-west-2"
+
+instances:
+  production:
+    - id: "${PROD_INSTANCE_ID_1}"
+      name: "prod-app-server-1"
+      backup_type: "hot"
+      volumes:
+        root:
+          device: "/dev/xvda1"
+          size: 100
+          type: "gp3"
+        data:
+          device: "/dev/xvdf"
+          size: 500
+          type: "io2"
+          iops: 5000
+      tags:
+        Environment: production
+        Role: application
+        BackupGroup: prod-critical
+    
+    - id: "${PROD_INSTANCE_ID_2}"
+      name: "prod-db-server-1"
+      backup_type: "cold"
+      volumes:
+        root:
+          device: "/dev/xvda1"
+          size: 100
+          type: "gp3"
+        data:
+          device: "/dev/xvdh"
+          size: 1000
+          type: "io2"
+          iops: 10000
+      tags:
+        Environment: production
+        Role: database
+        BackupGroup: prod-critical
+
+  staging:
+    - id: "${STAGING_INSTANCE_ID}"
+      name: "staging-app-server"
+      backup_type: "hot"
+      volumes:
+        root:
+          device: "/dev/xvda1"
+          size: 50
+          type: "gp3"
+      tags:
+        Environment: staging
+        Role: application
+
+snapshot_policies:
+  prod-critical:
+    retention:
+      hourly: 24
+      daily: 14
+      weekly: 8
+      monthly: 12
+    schedule:
+      full: "0 0 * * 0"  # Weekly on Sunday
+      incremental: "0 * * * *"  # Every hour
+    cross_region_copy: true
+    
+  staging:
+    retention:
+      daily: 7
+      weekly: 4
+    schedule:
+      full: "0 0 * * 0"  # Weekly on Sunday
+      incremental: "0 0 * * 1-6"  # Daily except Sunday
+    cross_region_copy: false
+
+encryption:
+  enabled: true
+  kms_key_id: "${AWS_KMS_KEY_ID}"
+  cross_region_key_id: "${AWS_DR_KMS_KEY_ID}"
+
+monitoring:
+  cloudwatch:
+    metrics_namespace: "Backup/Production"
+    metrics:
+      - BackupSize
+      - BackupDuration
+      - BackupStatus
+    alarms:
+      backup_failed:
+        comparison: GreaterThanThreshold
+        threshold: 0
+        evaluation_periods: 1
+        period: 300
+      backup_size_exceeded:
+        comparison: GreaterThanThreshold
+        threshold: 1000000000  # 1TB
+        evaluation_periods: 1
+        period: 300
+
+notification:
+  sns:
+    topic_arn: "${SNS_TOPIC_ARN}"
+    events:
+      - backup_start
+      - backup_complete
+      - backup_error
+      - recovery_start
+      - recovery_complete
+      - recovery_error
+  email:
+    recipients:
+      - "${ADMIN_EMAIL}"
+      - "${OPS_EMAIL}"
+
+recovery:
+  default_volume_type: "gp3"
+  max_parallel_restores: 3
+  verify_after_restore: true
+  automated_testing:
+    enabled: true
+    schedule: "0 4 * * 1"  # Every Monday at 4 AM
+    test_instances:
+      - "${TEST_INSTANCE_ID}"

@@ -1,0 +1,101 @@
+{
+  "name": "Windows Server 2022",
+  "version": "21H2",
+  "type": "windows",
+  "edition": "Standard",
+  "architecture": "x86_64",
+  "iso_url": "https://software-download.microsoft.com/download/Windows_Server_2022.iso",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "32",
+    "min_cpu": "2"
+  },
+  "autounattend": {
+    "settings": {
+      "windowsPE": {
+        "setupUILanguage": "en-US",
+        "inputLocale": "en-US",
+        "systemLocale": "en-US",
+        "uiLanguage": "en-US",
+        "userLocale": "en-US"
+      },
+      "diskConfiguration": {
+        "disk": {
+          "diskID": "0",
+          "willWipeDisk": true,
+          "createPartitions": {
+            "system": {
+              "order": "1",
+              "size": "350",
+              "type": "Primary"
+            },
+            "windows": {
+              "order": "2",
+              "extend": true,
+              "type": "Primary"
+            }
+          },
+          "modifyPartitions": {
+            "system": {
+              "format": "NTFS",
+              "label": "System",
+              "letter": "S"
+            },
+            "windows": {
+              "format": "NTFS",
+              "label": "Windows",
+              "letter": "C"
+            }
+          }
+        }
+      },
+      "imageInstall": {
+        "osImage": {
+          "installFrom": {
+            "metaData": {
+              "key": "/IMAGE/NAME",
+              "value": "Windows Server 2022 SERVERSTANDARD"
+            }
+          },
+          "installTo": {
+            "diskID": "0",
+            "partitionID": "2"
+          }
+        }
+      },
+      "userAccounts": {
+        "administratorPassword": {
+          "value": "P@ssw0rd123!",
+          "plainText": true
+        }
+      }
+    },
+    "oobeSystem": {
+      "autoLogon": {
+        "enabled": true,
+        "username": "Administrator",
+        "password": "P@ssw0rd123!"
+      },
+      "firstLogonCommands": [
+        "powershell -Command \"Set-ExecutionPolicy RemoteSigned -Force\"",
+        "powershell -Command \"Enable-PSRemoting -Force\"",
+        "powershell -Command \"Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False\"",
+        "powershell -Command \"Install-WindowsFeature -Name Web-Server -IncludeManagementTools\""
+      ],
+      "timeZone": "UTC"
+    }
+  },
+  "post_install": {
+    "windows_updates": true,
+    "features": [
+      "NET-Framework-Core",
+      "Web-Server",
+      "Web-WebServer"
+    ],
+    "powershell_scripts": [
+      "Set-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -Value 0",
+      "Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'"
+    ]
+  }
+}

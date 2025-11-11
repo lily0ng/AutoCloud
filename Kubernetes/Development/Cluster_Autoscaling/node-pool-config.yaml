@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-pool-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    nodeGroups:
+    - name: standard-nodes
+      minSize: 1
+      maxSize: 10
+      machineType: t3.medium
+      labels:
+        node-type: standard
+        priority: medium
+      taints: []
+      
+    - name: high-memory-nodes
+      minSize: 0
+      maxSize: 5
+      machineType: r5.large
+      labels:
+        node-type: high-memory
+        priority: high
+      taints:
+      - key: dedicated
+        value: memory-intensive
+        effect: NoSchedule
+        
+    - name: spot-nodes
+      minSize: 0
+      maxSize: 20
+      machineType: t3.small
+      labels:
+        node-type: spot
+        priority: low
+      spotInstance: true
+      
+    scaling:
+      scaleDownUnneededTime: 10m
+      scaleDownDelayAfterAdd: 10m
+      scaleDownUtilizationThreshold: 0.5
+      
+    nodeSelector:
+      disktype: ssd

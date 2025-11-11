@@ -1,0 +1,54 @@
+# Virtual Machine Configuration
+
+# General VM Settings
+vm_defaults:
+  cpu_cores: 2
+  memory_mb: 4096
+  disk_size_gb: 50
+  os_type: "ubuntu"
+  os_version: "20.04"
+
+# Network Configuration
+network:
+  type: "bridged"
+  adapter: "eth0"
+  ip_assignment: "dhcp"
+  
+# VM Instances
+instances:
+  - name: "web-server"
+    role: "web"
+    cpu_cores: 4
+    memory_mb: 8192
+    ports:
+      - 80
+      - 443
+    services:
+      - nginx
+      - php-fpm
+
+  - name: "db-server"
+    role: "database"
+    cpu_cores: 4
+    memory_mb: 16384
+    disk_size_gb: 100
+    ports:
+      - 3306
+    services:
+      - mysql-server
+
+  - name: "cache-server"
+    role: "cache"
+    cpu_cores: 2
+    memory_mb: 8192
+    ports:
+      - 6379
+    services:
+      - redis-server
+
+# Backup Configuration
+backup:
+  frequency: "daily"
+  retention_days: 7
+  backup_time: "02:00"
+  type: "snapshot"

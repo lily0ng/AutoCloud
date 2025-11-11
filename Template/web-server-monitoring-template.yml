@@ -1,0 +1,77 @@
+---
+# Web Server Monitoring Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-web-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    scrape_configs:
+      - job_name: 'nginx'
+        static_configs:
+          - targets: ['nginx-exporter:9113']
+        relabel_configs:
+          - source_labels: [__address__]
+            target_label: instance
+      
+      - job_name: 'apache'
+        static_configs:
+          - targets: ['apache-exporter:9117']
+      
+      - job_name: 'web-endpoints'
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+            - 'web-server-1:8080'
+            - 'web-server-2:8080'
+            - 'web-server-3:8080'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-web
+  namespace: monitoring
+data:
+  web-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Web Server Monitoring",
+        "panels": [
+          {
+            "title": "Request Rate",
+            "targets": [{"expr": "rate(nginx_http_requests_total[5m])"}]
+          },
+          {
+            "title": "Response Time",
+            "targets": [{"expr": "histogram_quantile(0.95, nginx_http_request_duration_seconds_bucket)"}]
+          },
+          {
+            "title": "Error Rate",
+            "targets": [{"expr": "rate(nginx_http_requests_total{status=~\"5..\"}[5m])"}]
+          },
+          {
+            "title": "Active Connections",
+            "targets": [{"expr": "nginx_connections_active"}]
+          }
+        ]
+      }
+    }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: web-server-monitor
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: web-server
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics

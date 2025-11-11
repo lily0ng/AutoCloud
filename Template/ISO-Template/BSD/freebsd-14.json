@@ -1,0 +1,59 @@
+{
+  "name": "FreeBSD 14.0",
+  "version": "14.0",
+  "type": "bsd",
+  "distribution": "freebsd",
+  "architecture": "amd64",
+  "iso_url": "https://download.freebsd.org/releases/amd64/amd64/ISO-IMAGES/14.0/FreeBSD-14.0-RELEASE-amd64-disc1.iso",
+  "checksum": "sha256:checksum_here",
+  "boot_command": [
+    "<enter><wait10>",
+    "<enter><wait>",
+    "bsdinstall script /tmp/installerconfig<enter>"
+  ],
+  "system_requirements": {
+    "min_ram": "1024",
+    "min_disk": "10",
+    "min_cpu": "1"
+  },
+  "installerconfig": {
+    "DISTRIBUTIONS": "kernel.txz base.txz",
+    "PARTITIONS": "ada0",
+    "HOSTNAME": "freebsd",
+    "export": {
+      "nonInteractive": "YES"
+    },
+    "partitioning": {
+      "scheme": "GPT",
+      "partitions": [
+        {"type": "freebsd-boot", "size": "512k"},
+        {"type": "freebsd-swap", "size": "2G"},
+        {"type": "freebsd-ufs", "size": "*", "mountpoint": "/"}
+      ]
+    },
+    "network": {
+      "interface": "em0",
+      "ipv4": "DHCP"
+    },
+    "services": [
+      "sshd",
+      "ntpd"
+    ],
+    "users": [{
+      "name": "freebsd",
+      "groups": "wheel",
+      "password": "encrypted_password"
+    }],
+    "packages": [
+      "sudo",
+      "bash",
+      "vim",
+      "curl",
+      "wget"
+    ],
+    "post_install": [
+      "echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config",
+      "echo '%wheel ALL=(ALL) NOPASSWD: ALL' >> /usr/local/etc/sudoers"
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: owncloud-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: owncloud
+      MYSQL_USER: owncloud
+      MYSQL_PASSWORD: owncloud123
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - owncloud-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: owncloud-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - owncloud-net
+
+  owncloud:
+    image: owncloud/server:latest
+    container_name: owncloud
+    ports:
+      - "8080:8080"
+    environment:
+      - OWNCLOUD_DOMAIN=localhost:8080
+      - OWNCLOUD_DB_TYPE=mysql
+      - OWNCLOUD_DB_NAME=owncloud
+      - OWNCLOUD_DB_USERNAME=owncloud
+      - OWNCLOUD_DB_PASSWORD=owncloud123
+      - OWNCLOUD_DB_HOST=mariadb
+      - OWNCLOUD_ADMIN_USERNAME=admin
+      - OWNCLOUD_ADMIN_PASSWORD=admin123
+      - OWNCLOUD_REDIS_ENABLED=true
+      - OWNCLOUD_REDIS_HOST=redis
+    volumes:
+      - owncloud_data:/mnt/data
+    depends_on:
+      - mariadb
+      - redis
+    networks:
+      - owncloud-net
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+  redis_data:
+  owncloud_data:
+
+networks:
+  owncloud-net:
+    driver: bridge

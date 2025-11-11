@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS IAM Group Template'
+
+Parameters:
+  GroupName:
+    Type: String
+    Default: MyIAMGroup
+
+Resources:
+  IAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Ref GroupName
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+
+Outputs:
+  GroupArn:
+    Value: !GetAtt IAMGroup.Arn

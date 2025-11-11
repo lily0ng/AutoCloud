@@ -1,0 +1,47 @@
+{
+  "name": "Rocky Linux 9",
+  "version": "9.3",
+  "type": "linux",
+  "distribution": "rocky",
+  "architecture": "x86_64",
+  "iso_url": "https://download.rockylinux.org/pub/rocky/9/isos/x86_64/Rocky-9.3-x86_64-minimal.iso",
+  "checksum": "sha256:checksum_here",
+  "boot_command": [
+    "<tab> text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/rocky9-ks.cfg<enter><wait>"
+  ],
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "20",
+    "min_cpu": "2"
+  },
+  "kickstart": {
+    "install": true,
+    "text": true,
+    "lang": "en_US.UTF-8",
+    "keyboard": "us",
+    "timezone": "UTC",
+    "rootpw": "--iscrypted $6$encrypted",
+    "user": {
+      "name": "rocky",
+      "groups": "wheel",
+      "password": "--iscrypted $6$encrypted"
+    },
+    "bootloader": "--location=mbr",
+    "zerombr": true,
+    "clearpart": "--all --initlabel",
+    "autopart": true,
+    "network": "--bootproto=dhcp --device=eth0 --onboot=yes --hostname=rocky9",
+    "firewall": "--enabled --service=ssh",
+    "selinux": "--enforcing",
+    "packages": [
+      "@core",
+      "openssh-server",
+      "vim",
+      "wget",
+      "curl"
+    ],
+    "services": {
+      "enabled": ["sshd"]
+    }
+  }
+}

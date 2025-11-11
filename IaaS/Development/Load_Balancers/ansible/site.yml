@@ -1,0 +1,52 @@
+---
+- name: Configure Load Balancers
+  hosts: load_balancers
+  become: yes
+  tasks:
+    - name: Install NGINX
+      apt:
+        name: nginx
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install HAProxy
+      package:
+        name: haproxy
+        state: present
+
+    - name: Copy NGINX configuration
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+      notify: restart nginx
+      when: ansible_os_family == "Debian"
+
+    - name: Copy HAProxy configuration
+      template:
+        src: templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+      notify: restart haproxy
+
+    - name: Enable and start NGINX
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Enable and start HAProxy
+      service:
+        name: haproxy
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+
+    - name: restart haproxy
+      service:
+        name: haproxy
+        state: restarted

@@ -1,0 +1,24 @@
+apiVersion: 1
+
+providers:
+  - name: 'OS Monitoring'
+    orgId: 1
+    folder: 'Operating Systems'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true
+
+  - name: 'Cloud Monitoring'
+    orgId: 1
+    folder: 'Cloud Services'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/cloud-dashboards
+      foldersFromFilesStructure: true

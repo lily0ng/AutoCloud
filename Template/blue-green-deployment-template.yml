@@ -1,0 +1,100 @@
+---
+# Blue-Green Deployment Template
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: app-blue-green
+  namespace: production
+spec:
+  replicas: 3
+  revisionHistoryLimit: 2
+  
+  selector:
+    matchLabels:
+      app: myapp
+  
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: app
+        image: myapp:latest
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+  
+  strategy:
+    blueGreen:
+      activeService: app-active
+      previewService: app-preview
+      
+      autoPromotionEnabled: false
+      autoPromotionSeconds: 30
+      
+      scaleDownDelaySeconds: 30
+      scaleDownDelayRevisionLimit: 2
+      
+      prePromotionAnalysis:
+        templates:
+        - templateName: smoke-tests
+        args:
+        - name: service-name
+          value: app-preview
+      
+      postPromotionAnalysis:
+        templates:
+        - templateName: performance-tests
+        args:
+        - name: service-name
+          value: app-active
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-active
+  namespace: production
+spec:
+  selector:
+    app: myapp
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-preview
+  namespace: production
+spec:
+  selector:
+    app: myapp
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: smoke-tests
+  namespace: production
+spec:
+  args:
+  - name: service-name
+  metrics:
+  - name: http-health-check
+    interval: 10s
+    successCondition: result == "200"
+    provider:
+      web:
+        url: "http://{{args.service-name}}/health"
+        jsonPath: "{$.status}"

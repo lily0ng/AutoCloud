@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Glue Job Template'
+
+Parameters:
+  JobName:
+    Type: String
+    Default: MyGlueJob
+  GlueVersion:
+    Type: String
+    Default: '4.0'
+  MaxCapacity:
+    Type: Number
+    Default: 2
+
+Resources:
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub '${JobName}-database'
+        Description: Glue database
+
+  GlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Ref JobName
+      Role: !GetAtt GlueRole.Arn
+      GlueVersion: !Ref GlueVersion
+      MaxCapacity: !Ref MaxCapacity
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://${ScriptBucket}/scripts/etl-script.py'
+      DefaultArguments:
+        '--job-language': python
+        '--TempDir': !Sub 's3://${ScriptBucket}/temp/'
+
+  ScriptBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${JobName}-scripts-${AWS::AccountId}'
+
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+
+Outputs:
+  JobName:
+    Value: !Ref GlueJob
+  DatabaseName:
+    Value: !Ref GlueDatabase

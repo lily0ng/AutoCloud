@@ -1,0 +1,37 @@
+monitoring:
+  metrics_collection:
+    interval: 60
+    retention_days: 30
+    metrics:
+      - name: cpu_usage
+        threshold_warning: 70
+        threshold_critical: 85
+      - name: memory_usage
+        threshold_warning: 75
+        threshold_critical: 90
+      - name: disk_usage
+        threshold_warning: 80
+        threshold_critical: 90
+      - name: network_io
+        threshold_warning: 80
+        threshold_critical: 90
+
+  logging:
+    level: INFO
+    retention_days: 30
+    formats:
+      - json
+      - syslog
+    
+  alerting:
+    channels:
+      - email
+      - slack
+      - pagerduty
+    rules:
+      - name: high_cpu
+        condition: "cpu_usage > 85%"
+        severity: critical
+      - name: high_memory
+        condition: "memory_usage > 90%"
+        severity: critical

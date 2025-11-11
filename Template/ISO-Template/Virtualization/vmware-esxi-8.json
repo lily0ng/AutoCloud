@@ -1,0 +1,31 @@
+{
+  "name": "VMware ESXi 8.0",
+  "version": "8.0",
+  "type": "virtualization",
+  "vendor": "vmware",
+  "architecture": "x86_64",
+  "iso_url": "https://customerconnect.vmware.com/downloads/ESXi-8.0.iso",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "8192",
+    "min_disk": "32",
+    "min_cpu": "2",
+    "hardware_virtualization": true
+  },
+  "installation": {
+    "accept_eula": true,
+    "disk": "local",
+    "keyboard": "US Default",
+    "root_password": "VMware123!",
+    "network": {
+      "management_network": "vmnic0",
+      "ip_config": "dhcp"
+    }
+  },
+  "post_install": {
+    "enable_ssh": true,
+    "enable_shell": true,
+    "ntp_servers": ["pool.ntp.org"],
+    "syslog_server": ""
+  }
+}

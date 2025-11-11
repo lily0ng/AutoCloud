@@ -1,0 +1,49 @@
+{
+  "name": "CentOS Stream 9",
+  "version": "9",
+  "type": "linux",
+  "distribution": "centos",
+  "architecture": "x86_64",
+  "iso_url": "https://mirrors.centos.org/mirrorlist?path=/9-stream/BaseOS/x86_64/iso/CentOS-Stream-9-latest-x86_64-dvd1.iso",
+  "checksum": "sha256:checksum_here",
+  "boot_command": [
+    "<tab> text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/centos9-ks.cfg<enter><wait>"
+  ],
+  "system_requirements": {
+    "min_ram": "2048",
+    "min_disk": "20",
+    "min_cpu": "2"
+  },
+  "kickstart": {
+    "install": true,
+    "text": true,
+    "lang": "en_US.UTF-8",
+    "keyboard": "us",
+    "timezone": "America/New_York --utc",
+    "rootpw": "--iscrypted $6$rounds=4096$salt$hash",
+    "user": {
+      "name": "centos",
+      "groups": "wheel",
+      "password": "--iscrypted $6$rounds=4096$salt$hash"
+    },
+    "bootloader": "--location=mbr --boot-drive=sda",
+    "zerombr": true,
+    "clearpart": "--all --initlabel",
+    "autopart": "--type=lvm",
+    "network": "--bootproto=dhcp --device=eth0 --onboot=yes --noipv6 --hostname=centos9",
+    "firewall": "--enabled --ssh",
+    "selinux": "--enforcing",
+    "packages": [
+      "@^minimal-environment",
+      "openssh-server",
+      "vim",
+      "wget",
+      "curl",
+      "net-tools"
+    ],
+    "services": {
+      "enabled": ["sshd", "chronyd"]
+    },
+    "reboot": true
+  }
+}

@@ -1,0 +1,41 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ${APP_NAME}-vpa
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP_NAME}
+    environment: ${ENVIRONMENT}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: ${APP_NAME}
+  updatePolicy:
+    updateMode: "Auto"  # Options: Off, Initial, Recreate, Auto
+  resourcePolicy:
+    containerPolicies:
+    - containerName: ${CONTAINER_NAME}
+      minAllowed:
+        cpu: ${MIN_CPU}
+        memory: ${MIN_MEMORY}
+      maxAllowed:
+        cpu: ${MAX_CPU}
+        memory: ${MAX_MEMORY}
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ${APP_NAME}-vpa-recommendation
+  namespace: ${NAMESPACE}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: ${APP_NAME}
+  updatePolicy:
+    updateMode: "Off"  # Only provide recommendations
+  recommenders:
+  - name: custom-recommender

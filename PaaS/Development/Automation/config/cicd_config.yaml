@@ -1,0 +1,60 @@
+cicd:
+  pipeline:
+    triggers:
+      - push:
+          branches: ["main", "develop"]
+      - pull_request:
+          types: ["opened", "synchronize"]
+          
+    stages:
+      build:
+        timeout: 30m
+        cache:
+          enabled: true
+          key: "v1-{{ checksum 'package-lock.json' }}"
+          
+      test:
+        parallel: true
+        matrix:
+          node_version: ["14", "16", "18"]
+          os: ["ubuntu-latest", "macos-latest"]
+          
+      security_scan:
+        tools:
+          - sonarqube
+          - snyk
+          - dependabot
+        fail_on: ["critical", "high"]
+        
+      deploy:
+        environments:
+          staging:
+            auto_deploy: true
+            approval_required: false
+            
+          production:
+            auto_deploy: false
+            approval_required: true
+            approvers: ["team-leads"]
+            
+  artifacts:
+    storage:
+      type: s3
+      retention_days: 30
+      
+    registry:
+      type: ecr
+      scan_on_push: true
+      
+  notifications:
+    success:
+      channels: ["slack"]
+      
+    failure:
+      channels: ["slack", "email"]
+      include_logs: true
+      
+  quality_gates:
+    code_coverage: 80
+    unit_test_pass_rate: 100
+    integration_test_pass_rate: 95

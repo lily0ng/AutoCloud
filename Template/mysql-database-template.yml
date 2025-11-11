@@ -1,0 +1,103 @@
+---
+# MySQL Database Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: database
+data:
+  my.cnf: |
+    [mysqld]
+    # General
+    user = mysql
+    port = 3306
+    datadir = /var/lib/mysql
+    socket = /var/run/mysqld/mysqld.sock
+    
+    # Performance
+    max_connections = 500
+    max_allowed_packet = 64M
+    thread_cache_size = 50
+    table_open_cache = 4000
+    
+    # InnoDB
+    innodb_buffer_pool_size = 4G
+    innodb_log_file_size = 512M
+    innodb_flush_log_at_trx_commit = 2
+    innodb_flush_method = O_DIRECT
+    
+    # Replication
+    server_id = 1
+    log_bin = /var/log/mysql/mysql-bin.log
+    binlog_format = ROW
+    expire_logs_days = 7
+    
+    # Security
+    bind_address = 0.0.0.0
+    skip_name_resolve
+    
+    [client]
+    port = 3306
+    socket = /var/run/mysqld/mysqld.sock
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: database
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: root-password
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        - name: mysql-config
+          mountPath: /etc/mysql/conf.d
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 4Gi
+          limits:
+            cpu: 2000m
+            memory: 8Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: database
+spec:
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+  clusterIP: None

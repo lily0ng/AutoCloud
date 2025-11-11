@@ -1,0 +1,40 @@
+monitoring:
+  prometheus:
+    enabled: true
+    retention: 1d
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+        
+  grafana:
+    enabled: true
+    persistence:
+      enabled: false
+    adminPassword: "admin"
+    defaultDashboardsEnabled: true
+    
+  alertmanager:
+    enabled: false
+    
+  loki:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 10Gi
+      
+  jaeger:
+    enabled: true
+    storage:
+      type: memory
+      
+  debug:
+    enabled: true
+    verboseLogging: true
+    
+  metrics:
+    scrapeInterval: 15s
+    evaluationInterval: 15s

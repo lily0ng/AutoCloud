@@ -1,0 +1,147 @@
+---
+# WordPress Blog Template
+# Production-ready WordPress deployment with MySQL
+
+version: '3.8'
+
+services:
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:-changeme}
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_TABLE_PREFIX: wp_
+      WORDPRESS_DEBUG: 0
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_MEMORY_LIMIT', '256M');
+        define('WP_MAX_MEMORY_LIMIT', '512M');
+        define('FORCE_SSL_ADMIN', true);
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - wordpress_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/wp-admin/install.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mysql:
+    image: mysql:8.0
+    container_name: wordpress_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD:-changeme}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-config.cnf:/etc/mysql/conf.d/custom.cnf
+    networks:
+      - wordpress_network
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: wordpress_redis
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass}
+    volumes:
+      - redis_data:/data
+    networks:
+      - wordpress_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    container_name: wordpress_nginx
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - wordpress_data:/var/www/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - wordpress
+    networks:
+      - wordpress_network
+
+  backup:
+    image: wordpress:cli
+    container_name: wordpress_backup
+    restart: unless-stopped
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:-changeme}
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./backups:/backups
+      - ./backup.sh:/backup.sh
+    entrypoint: /bin/sh
+    command: -c "while true; do /backup.sh; sleep 86400; done"
+    depends_on:
+      - mysql
+    networks:
+      - wordpress_network
+
+volumes:
+  wordpress_data:
+    driver: local
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  wordpress_network:
+    driver: bridge
+
+# Configuration Files
+---
+# uploads.ini
+upload_max_filesize = 64M
+post_max_size = 64M
+max_execution_time = 300
+memory_limit = 256M
+
+---
+# mysql-config.cnf
+[mysqld]
+max_allowed_packet = 64M
+innodb_buffer_pool_size = 512M
+innodb_log_file_size = 128M
+
+---
+# backup.sh
+#!/bin/sh
+DATE=$(date +%Y%m%d_%H%M%S)
+wp db export /backups/wordpress_db_$DATE.sql --allow-root
+tar -czf /backups/wordpress_files_$DATE.tar.gz -C /var/www/html .
+find /backups -name "*.sql" -mtime +7 -delete
+find /backups -name "*.tar.gz" -mtime +7 -delete

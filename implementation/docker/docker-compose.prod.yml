@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  service-a:
+    image: autocloud/service-a:${VERSION:-latest}
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      - ENV=production
+      - LOG_LEVEL=info
+
+  service-b:
+    image: autocloud/service-b:${VERSION:-latest}
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  nginx:
+    image: autocloud/nginx:${VERSION:-latest}
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+
+  postgres:
+    image: autocloud/postgres:${VERSION:-latest}
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == true
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+    secrets:
+      - db_password
+
+secrets:
+  db_password:
+    external: true

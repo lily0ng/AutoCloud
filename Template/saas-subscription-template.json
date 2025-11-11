@@ -1,0 +1,97 @@
+{
+  "name": "SaaS Subscription Management Template",
+  "description": "Template for managing SaaS subscriptions and billing",
+  "version": "1.0",
+  "components": {
+    "subscriptionService": {
+      "type": "microservice",
+      "runtime": "nodejs",
+      "endpoints": [
+        {
+          "path": "/api/subscriptions",
+          "method": "POST",
+          "description": "Create new subscription"
+        },
+        {
+          "path": "/api/subscriptions/:id",
+          "method": "GET",
+          "description": "Get subscription details"
+        },
+        {
+          "path": "/api/subscriptions/:id/upgrade",
+          "method": "PUT",
+          "description": "Upgrade subscription plan"
+        },
+        {
+          "path": "/api/subscriptions/:id/cancel",
+          "method": "DELETE",
+          "description": "Cancel subscription"
+        }
+      ],
+      "database": {
+        "type": "postgresql",
+        "schema": {
+          "subscriptions": {
+            "id": "uuid PRIMARY KEY",
+            "tenant_id": "uuid NOT NULL",
+            "plan_id": "uuid NOT NULL",
+            "status": "varchar(50)",
+            "start_date": "timestamp",
+            "end_date": "timestamp",
+            "auto_renew": "boolean DEFAULT true",
+            "created_at": "timestamp DEFAULT NOW()",
+            "updated_at": "timestamp DEFAULT NOW()"
+          },
+          "plans": {
+            "id": "uuid PRIMARY KEY",
+            "name": "varchar(100)",
+            "description": "text",
+            "price": "decimal(10,2)",
+            "billing_cycle": "varchar(20)",
+            "features": "jsonb",
+            "max_users": "integer",
+            "max_storage_gb": "integer"
+          }
+        }
+      }
+    },
+    "billingService": {
+      "type": "microservice",
+      "runtime": "python",
+      "integrations": [
+        "stripe",
+        "paypal",
+        "braintree"
+      ],
+      "endpoints": [
+        {
+          "path": "/api/billing/invoice",
+          "method": "POST",
+          "description": "Generate invoice"
+        },
+        {
+          "path": "/api/billing/payment",
+          "method": "POST",
+          "description": "Process payment"
+        }
+      ]
+    }
+  },
+  "infrastructure": {
+    "kubernetes": {
+      "deployment": {
+        "replicas": 3,
+        "resources": {
+          "requests": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "limits": {
+            "cpu": "1000m",
+            "memory": "1Gi"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+    "monitoring": {
+        "metrics": {
+            "resourceId": "[parameters('vmResourceId')]",
+            "metricNamespace": "Microsoft.Compute/virtualMachines",
+            "metrics": [
+                {
+                    "name": "Percentage CPU",
+                    "enabled": true,
+                    "timeGrain": "PT1M"
+                },
+                {
+                    "name": "Network In",
+                    "enabled": true,
+                    "timeGrain": "PT1M"
+                },
+                {
+                    "name": "Network Out",
+                    "enabled": true,
+                    "timeGrain": "PT1M"
+                }
+            ]
+        },
+        "logs": {
+            "categories": [
+                {
+                    "category": "Administrative",
+                    "enabled": true
+                },
+                {
+                    "category": "Security",
+                    "enabled": true
+                },
+                {
+                    "category": "ServiceHealth",
+                    "enabled": true
+                }
+            ]
+        },
+        "workspaceId": "[parameters('workspaceId')]",
+        "diagnosticSettings": {
+            "name": "send-to-log-analytics",
+            "workspaceId": "[parameters('workspaceId')]",
+            "storageAccountId": "[parameters('storageAccountId')]"
+        }
+    }
+}

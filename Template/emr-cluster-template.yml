@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon EMR Cluster Template'
+
+Parameters:
+  ClusterName:
+    Type: String
+    Default: MyEMRCluster
+  ReleaseLabel:
+    Type: String
+    Default: emr-6.15.0
+  MasterInstanceType:
+    Type: String
+    Default: m5.xlarge
+  CoreInstanceType:
+    Type: String
+    Default: m5.xlarge
+  CoreInstanceCount:
+    Type: Number
+    Default: 2
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+
+Resources:
+  EMRCluster:
+    Type: AWS::EMR::Cluster
+    Properties:
+      Name: !Ref ClusterName
+      ReleaseLabel: !Ref ReleaseLabel
+      Applications:
+        - Name: Spark
+        - Name: Hadoop
+        - Name: Hive
+      ServiceRole: !Ref EMRServiceRole
+      JobFlowRole: !Ref EMRInstanceProfile
+      Instances:
+        MasterInstanceGroup:
+          InstanceCount: 1
+          InstanceType: !Ref MasterInstanceType
+          Market: ON_DEMAND
+        CoreInstanceGroup:
+          InstanceCount: !Ref CoreInstanceCount
+          InstanceType: !Ref CoreInstanceType
+          Market: ON_DEMAND
+        Ec2SubnetId: !Ref SubnetId
+      LogUri: !Sub 's3://${LogBucket}/emr-logs/'
+
+  LogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ClusterName}-logs-${AWS::AccountId}'
+
+  EMRServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: elasticmapreduce.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole
+
+  EMRInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role
+
+  EMRInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EMRInstanceRole
+
+Outputs:
+  ClusterId:
+    Value: !Ref EMRCluster
+  MasterPublicDNS:
+    Value: !GetAtt EMRCluster.MasterPublicDNS

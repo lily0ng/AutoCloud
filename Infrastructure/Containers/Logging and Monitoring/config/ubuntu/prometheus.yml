@@ -1,0 +1,48 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    os: ubuntu
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['localhost:9093']
+
+scrape_configs:
+  - job_name: 'ubuntu_node'
+    static_configs:
+      - targets: ['localhost:9100']
+        labels:
+          os: ubuntu
+          instance: ubuntu_node
+
+  - job_name: 'ubuntu_services'
+    static_configs:
+      - targets:
+        - 'localhost:80'  # nginx/apache
+        - 'localhost:3000'  # grafana
+        - 'localhost:9200'  # elasticsearch
+        - 'localhost:5601'  # kibana
+    metrics_path: /metrics
+    scheme: http
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__address__]
+        target_label: service
+        regex: '.*:(.*)'
+        replacement: '${1}'
+
+  - job_name: 'ubuntu_process'
+    static_configs:
+      - targets: ['localhost:9256']  # process-exporter
+    metrics_path: /metrics
+
+  - job_name: 'ubuntu_container'
+    static_configs:
+      - targets: ['localhost:8080']  # cadvisor
+    metrics_path: /metrics

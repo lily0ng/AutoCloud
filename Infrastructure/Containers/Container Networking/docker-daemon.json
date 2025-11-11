@@ -1,0 +1,17 @@
+{
+  "default-network": "bridge",
+  "dns": ["8.8.8.8", "8.8.4.4"],
+  "dns-opts": ["ndots:1"],
+  "mtu": 1500,
+  "bip": "172.17.0.1/16",
+  "fixed-cidr": "172.17.0.0/16",
+  "fixed-cidr-v6": "2001:db8::/64",
+  "default-gateway": "172.17.0.1",
+  "default-gateway-v6": "2001:db8::1",
+  "iptables": true,
+  "ip-forward": true,
+  "ip-masq": true,
+  "userland-proxy": true,
+  "storage-driver": "overlay2",
+  "metrics-addr": "127.0.0.1:9323"
+}

@@ -1,0 +1,29 @@
+{
+  "name": "OPNsense 23.7",
+  "version": "23.7",
+  "type": "firewall",
+  "distribution": "opnsense",
+  "architecture": "amd64",
+  "iso_url": "https://mirror.ams1.nl.leaseweb.net/opnsense/releases/23.7/OPNsense-23.7-dvd-amd64.iso.bz2",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "1024",
+    "min_disk": "8",
+    "min_cpu": "1",
+    "network_interfaces": 2
+  },
+  "installation": {
+    "keymap": "us.kbd",
+    "partitioning": "guided",
+    "disk": "ada0",
+    "filesystem": "ufs"
+  },
+  "initial_config": {
+    "wan_interface": "em0",
+    "lan_interface": "em1",
+    "lan_ip": "192.168.1.1/24",
+    "root_password": "opnsense",
+    "hostname": "OPNsense",
+    "domain": "localdomain"
+  }
+}

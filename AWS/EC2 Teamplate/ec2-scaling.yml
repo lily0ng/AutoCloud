@@ -1,0 +1,21 @@
+Resources:
+  LaunchConfiguration:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      InstanceType: "t2.micro"
+      ImageId: "ami-0abcd12345example"
+      KeyName: "my-key-pair"
+
+  AutoScalingGroup:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: 1
+      MaxSize: 5
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - "subnet-0abcd12345example"
+      Tags:
+        - Key: "Name"
+          Value: "AutoScalingInstance"
+          PropagateAtLaunch: true

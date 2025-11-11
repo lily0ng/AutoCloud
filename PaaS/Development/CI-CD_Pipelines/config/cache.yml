@@ -1,0 +1,38 @@
+cache:
+  redis:
+    enabled: true
+    mode: cluster
+    replicas: 3
+    persistence:
+      enabled: true
+      storageClass: standard
+      size: 10Gi
+    
+    configuration:
+      maxmemory: 2gb
+      maxmemory-policy: allkeys-lru
+      timeout: 300
+      databases: 16
+    
+    security:
+      auth:
+        enabled: true
+        secretName: redis-secret
+      
+    monitoring:
+      enabled: true
+      prometheus:
+        enabled: true
+    
+    backup:
+      enabled: true
+      schedule: "0 0 * * *"
+      retention: 7
+      
+    clusters:
+      - name: session-store
+        size: 2gb
+        replicas: 2
+      - name: api-cache
+        size: 4gb
+        replicas: 3

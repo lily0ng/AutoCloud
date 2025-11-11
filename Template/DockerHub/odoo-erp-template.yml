@@ -1,0 +1,25 @@
+---
+# Odoo ERP Template
+version: '3.8'
+services:
+  odoo:
+    image: odoo:16
+    restart: always
+    ports: ["8069:8069"]
+    environment:
+      HOST: postgres
+      USER: odoo
+      PASSWORD: ${DB_PASSWORD:-odoopass}
+    volumes: [odoo_data:/var/lib/odoo, ./addons:/mnt/extra-addons, ./config:/etc/odoo]
+    depends_on: [postgres]
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-odoopass}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+volumes:
+  odoo_data:
+  postgres_data:

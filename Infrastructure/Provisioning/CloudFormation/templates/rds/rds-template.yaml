@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'RDS Database Setup Template'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: Development
+    Description: Environment name
+
+  DBInstanceIdentifier:
+    Type: String
+    Description: Database instance identifier
+
+  DBEngine:
+    Type: String
+    Default: mysql
+    AllowedValues:
+      - mysql
+      - postgres
+      - aurora
+      - aurora-postgresql
+    Description: Database engine type
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+    Description: Database instance class
+
+  DBName:
+    Type: String
+    Description: Database name
+    MinLength: 1
+    MaxLength: 64
+
+  DBUsername:
+    Type: String
+    Description: Database admin username
+    NoEcho: true
+
+  DBPassword:
+    Type: String
+    Description: Database admin password
+    NoEcho: true
+    MinLength: 8
+
+  MultiAZ:
+    Type: String
+    Default: false
+    AllowedValues: [true, false]
+    Description: Enable Multi-AZ deployment
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS instance
+      SubnetIds: !Split [',', !ImportValue !Sub '${EnvironmentName}-PrivateSubnets']
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS instance
+      VpcId: !ImportValue !Sub '${EnvironmentName}-VPCID'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !ImportValue !Sub '${EnvironmentName}-VPCCIDR'
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      Engine: !Ref DBEngine
+      DBInstanceClass: !Ref DBInstanceClass
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      StorageType: gp3
+      MultiAZ: !Ref MultiAZ
+      PubliclyAccessible: false
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      BackupRetentionPeriod: 7
+      DeleteAutomatedBackups: false
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  DBEndpoint:
+    Description: Database endpoint
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${EnvironmentName}-DBEndpoint
+
+  DBPort:
+    Description: Database port
+    Value: !GetAtt RDSInstance.Endpoint.Port
+    Export:
+      Name: !Sub ${EnvironmentName}-DBPort

@@ -1,0 +1,80 @@
+---
+# Azure Storage Configuration
+
+managed_disks:
+  os_disk:
+    storage_type: "Premium_LRS"
+    size_gb: 128
+    caching: "ReadWrite"
+    encryption:
+      type: "EncryptionAtRestWithPlatformKey"
+    
+  data_disk:
+    storage_type: "Premium_LRS"
+    size_gb: 512
+    caching: "None"
+    encryption:
+      type: "EncryptionAtRestWithCustomerKey"
+      key_vault_key_url: "https://keyvault-name.vault.azure.net/keys/key-name"
+
+storage_accounts:
+  primary:
+    type: "StorageV2"
+    tier: "Standard"
+    replication: "ZRS"
+    access_tier: "Hot"
+    encryption:
+      services:
+        blob: true
+        file: true
+        table: true
+        queue: true
+      key_source: "Microsoft.Keyvault"
+    network_rules:
+      default_action: "Deny"
+      ip_rules: ["10.0.0.0/24"]
+      virtual_network_rules:
+        - subnet_id: "/subscriptions/.../subnets/subnet1"
+
+file_shares:
+  company_share:
+    quota_gb: 1024
+    protocols:
+      - SMB
+      - NFS
+    access_tier: "TransactionOptimized"
+    backup:
+      enabled: true
+      policy:
+        retention_days: 30
+        schedule: "0 0 * * *"
+
+blob_containers:
+  data:
+    access_type: "private"
+    lifecycle_rules:
+      - move_to_cool: 30
+      - move_to_archive: 180
+      - delete_after: 365
+    versioning: enabled
+    
+  backup:
+    access_type: "private"
+    immutable_storage:
+      enabled: true
+      period_days: 90
+
+azure_netapp_files:
+  capacity_pool:
+    service_level: "Premium"
+    size_tib: 4
+    qos_type: "Auto"
+  volumes:
+    shared_volume:
+      protocol: "NFSv3"
+      size_gib: 1024
+      export_policy:
+        rule:
+          - allowed_clients: "0.0.0.0/0"
+            protocols: ["NFSv3"]
+            access: "ReadWrite"

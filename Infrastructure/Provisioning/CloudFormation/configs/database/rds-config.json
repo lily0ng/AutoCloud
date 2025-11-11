@@ -1,0 +1,34 @@
+{
+    "Parameters": {
+        "EnvironmentName": "Production",
+        "DBInstanceIdentifier": "prod-main-db",
+        "DBEngine": "postgres",
+        "DBInstanceClass": "db.t3.small",
+        "DBName": "appdb",
+        "DBUsername": "admin",
+        "MultiAZ": "true"
+    },
+    "EnvironmentConfigs": {
+        "Development": {
+            "DBInstanceClass": "db.t3.micro",
+            "MultiAZ": "false",
+            "BackupRetentionPeriod": 7
+        },
+        "Staging": {
+            "DBInstanceClass": "db.t3.small",
+            "MultiAZ": "false",
+            "BackupRetentionPeriod": 14
+        },
+        "Production": {
+            "DBInstanceClass": "db.t3.medium",
+            "MultiAZ": "true",
+            "BackupRetentionPeriod": 30
+        }
+    },
+    "Tags": {
+        "Project": "DatabaseInfra",
+        "Environment": "Production",
+        "Owner": "DBA-Team",
+        "CostCenter": "IT-Database"
+    }
+}

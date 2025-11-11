@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  service-a:
+    build:
+      context: ../
+      dockerfile: docker/services/service-a/Dockerfile
+      target: builder
+    volumes:
+      - ../services/service-a:/app
+    command: go run main.go
+    environment:
+      - ENV=development
+      - DEBUG=true
+    ports:
+      - "8080:8080"
+
+  service-b:
+    build:
+      context: ../
+      dockerfile: docker/services/service-b/Dockerfile
+      target: builder
+    volumes:
+      - ../services/service-b:/app
+    command: go run main.go
+    environment:
+      - ENV=development
+    ports:
+      - "8081:8081"
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=dev
+      - POSTGRES_PASSWORD=dev
+      - POSTGRES_DB=devdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass dev
+
+volumes:
+  postgres-dev-data:

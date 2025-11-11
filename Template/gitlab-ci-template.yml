@@ -1,0 +1,202 @@
+# GitLab CI/CD Pipeline Template
+# Comprehensive pipeline with build, test, security, and deploy stages
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  LATEST_TAG: $CI_REGISTRY_IMAGE:latest
+
+stages:
+  - lint
+  - test
+  - security
+  - build
+  - deploy-staging
+  - deploy-production
+
+# Cache configuration
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .npm/
+    - .cache/
+
+# Lint stage
+lint:code:
+  stage: lint
+  image: node:18-alpine
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run lint
+  only:
+    - merge_requests
+    - main
+    - develop
+
+lint:dockerfile:
+  stage: lint
+  image: hadolint/hadolint:latest-alpine
+  script:
+    - hadolint Dockerfile
+  only:
+    - merge_requests
+    - main
+
+# Test stage
+test:unit:
+  stage: test
+  image: node:18-alpine
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run test:unit
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+  artifacts:
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+    expire_in: 30 days
+
+test:integration:
+  stage: test
+  image: node:18-alpine
+  services:
+    - postgres:15-alpine
+    - redis:7-alpine
+  variables:
+    POSTGRES_DB: testdb
+    POSTGRES_USER: testuser
+    POSTGRES_PASSWORD: testpass
+    DATABASE_URL: postgresql://testuser:testpass@postgres:5432/testdb
+    REDIS_URL: redis://redis:6379
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run test:integration
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Security scanning
+security:dependency-scan:
+  stage: security
+  image: node:18-alpine
+  script:
+    - npm audit --audit-level=moderate
+  allow_failure: true
+
+security:sast:
+  stage: security
+  image: returntocorp/semgrep
+  script:
+    - semgrep --config=auto --json --output=sast-report.json .
+  artifacts:
+    reports:
+      sast: sast-report.json
+    expire_in: 30 days
+  allow_failure: true
+
+security:container-scan:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $IMAGE_TAG
+  dependencies:
+    - build:docker
+  allow_failure: true
+
+# Build stage
+build:docker:
+  stage: build
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build --pull -t $IMAGE_TAG -t $LATEST_TAG .
+    - docker push $IMAGE_TAG
+    - docker push $LATEST_TAG
+  only:
+    - main
+    - develop
+    - tags
+
+# Deploy to staging
+deploy:staging:
+  stage: deploy-staging
+  image: alpine/k8s:1.28.0
+  environment:
+    name: staging
+    url: https://staging.example.com
+    on_stop: stop:staging
+  before_script:
+    - kubectl config use-context staging
+  script:
+    - kubectl set image deployment/app app=$IMAGE_TAG -n staging
+    - kubectl rollout status deployment/app -n staging
+    - kubectl get pods -n staging
+  only:
+    - develop
+  when: manual
+
+stop:staging:
+  stage: deploy-staging
+  image: alpine/k8s:1.28.0
+  environment:
+    name: staging
+    action: stop
+  script:
+    - kubectl delete deployment app -n staging
+  when: manual
+  only:
+    - develop
+
+# Deploy to production
+deploy:production:
+  stage: deploy-production
+  image: alpine/k8s:1.28.0
+  environment:
+    name: production
+    url: https://example.com
+  before_script:
+    - kubectl config use-context production
+  script:
+    - kubectl set image deployment/app app=$IMAGE_TAG -n production
+    - kubectl rollout status deployment/app -n production
+    - kubectl get pods -n production
+  only:
+    - main
+    - tags
+  when: manual
+
+# Rollback production
+rollback:production:
+  stage: deploy-production
+  image: alpine/k8s:1.28.0
+  environment:
+    name: production
+  script:
+    - kubectl rollout undo deployment/app -n production
+    - kubectl rollout status deployment/app -n production
+  when: manual
+  only:
+    - main
+
+# Database migration
+db:migrate:
+  stage: deploy-production
+  image: node:18-alpine
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run db:migrate
+  only:
+    - main
+  when: manual
+  environment:
+    name: production

@@ -1,0 +1,62 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/messages
+    - /var/log/secure
+    - /var/log/yum.log
+    - /var/log/audit/audit.log
+    - /var/log/dmesg
+  fields:
+    log_type: system
+    os: centos
+
+- type: log
+  enabled: true
+  paths:
+    - /var/log/nginx/access.log
+    - /var/log/nginx/error.log
+  fields:
+    log_type: nginx
+    os: centos
+
+- type: log
+  enabled: true
+  paths:
+    - /var/log/httpd/access_log
+    - /var/log/httpd/error_log
+  fields:
+    log_type: httpd
+    os: centos
+
+- type: journald
+  id: journald-centos
+  paths: 
+    - /run/log/journal
+  fields:
+    log_type: journal
+    os: centos
+
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+setup.template.settings:
+  index.number_of_shards: 1
+
+output.elasticsearch:
+  hosts: ["localhost:9200"]
+  protocol: "http"
+  index: "centos-logs-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "localhost:5601"
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+  - drop_fields:
+      fields: ["agent.ephemeral_id", "agent.hostname", "agent.id", "agent.version"]

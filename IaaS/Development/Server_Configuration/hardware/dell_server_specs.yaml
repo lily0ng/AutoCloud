@@ -1,0 +1,53 @@
+---
+dell_servers:
+  r740:
+    model: "PowerEdge R740"
+    form_factor: "2U Rack"
+    processors:
+      type: "Intel Xeon Gold"
+      cores: 28
+      sockets: 2
+    memory:
+      max_capacity: "3TB"
+      type: "DDR4"
+      speed: "3200MT/s"
+    storage:
+      controller: "PERC H740P"
+      drive_bays: 16
+      supported_drives:
+        - "SAS"
+        - "SATA"
+        - "NVMe"
+    networking:
+      standard: "4x 1GbE"
+      optional: "2x 10GbE"
+    power:
+      redundancy: true
+      hot_plug: true
+      wattage: "750W"
+
+  r750:
+    model: "PowerEdge R750"
+    form_factor: "2U Rack"
+    processors:
+      type: "Intel Xeon Scalable 3rd Generation"
+      cores: 40
+      sockets: 2
+    memory:
+      max_capacity: "4TB"
+      type: "DDR4"
+      speed: "3200MT/s"
+    storage:
+      controller: "PERC H755"
+      drive_bays: 24
+      supported_drives:
+        - "SAS"
+        - "SATA"
+        - "NVMe"
+    networking:
+      standard: "4x 1GbE"
+      optional: "2x 25GbE"
+    power:
+      redundancy: true
+      hot_plug: true
+      wattage: "800W"

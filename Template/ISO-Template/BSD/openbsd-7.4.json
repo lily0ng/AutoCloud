@@ -1,0 +1,22 @@
+{
+  "name": "OpenBSD 7.4",
+  "version": "7.4",
+  "type": "bsd",
+  "distribution": "openbsd",
+  "architecture": "amd64",
+  "iso_url": "https://cdn.openbsd.org/pub/OpenBSD/7.4/amd64/install74.iso",
+  "checksum": "sha256:checksum_here",
+  "system_requirements": {
+    "min_ram": "512",
+    "min_disk": "1",
+    "min_cpu": "1"
+  },
+  "install_conf": {
+    "hostname": "openbsd",
+    "network": "dhcp",
+    "password": "encrypted",
+    "timezone": "UTC",
+    "disk": "sd0",
+    "sets": "all"
+  }
+}

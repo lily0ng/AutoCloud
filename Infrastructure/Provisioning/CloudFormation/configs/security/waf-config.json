@@ -1,0 +1,67 @@
+{
+    "Parameters": {
+        "EnvironmentName": "Production"
+    },
+    "WAFRules": {
+        "IPRateLimit": {
+            "Name": "IPRateLimit",
+            "Priority": 1,
+            "RateLimit": 2000,
+            "Action": "block"
+        },
+        "GeoMatch": {
+            "Name": "GeoMatch",
+            "Priority": 2,
+            "CountryCodes": ["US", "CA", "GB", "DE", "FR"],
+            "Action": "allow"
+        },
+        "SQLInjectionProtection": {
+            "Name": "SQLInjectionProtection",
+            "Priority": 3,
+            "Action": "block"
+        },
+        "XSSProtection": {
+            "Name": "XSSProtection",
+            "Priority": 4,
+            "Action": "block"
+        },
+        "BadBotProtection": {
+            "Name": "BadBotProtection",
+            "Priority": 5,
+            "Action": "block",
+            "BadBotScore": 75
+        }
+    },
+    "IPSets": {
+        "AllowedIPs": {
+            "Name": "AllowedIPs",
+            "IPAddressVersion": "IPV4",
+            "Addresses": [
+                "192.168.1.0/24",
+                "10.0.0.0/16"
+            ]
+        },
+        "BlockedIPs": {
+            "Name": "BlockedIPs",
+            "IPAddressVersion": "IPV4",
+            "Addresses": [
+                "172.16.0.0/24"
+            ]
+        }
+    },
+    "RegexPatternSets": {
+        "BadBotPatterns": {
+            "Name": "BadBotPatterns",
+            "RegularExpressionList": [
+                "bad-bot-*",
+                "malicious-crawler*"
+            ]
+        }
+    },
+    "Tags": {
+        "Project": "WAFInfra",
+        "Environment": "Production",
+        "Owner": "Security-Team",
+        "CostCenter": "IT-Security"
+    }
+}

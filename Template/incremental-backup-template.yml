@@ -1,0 +1,365 @@
+---
+# Incremental Backup Template
+# Configuration for incremental backup strategy with change tracking
+
+apiVersion: backup.autocloud.io/v1
+kind: IncrementalBackup
+metadata:
+  name: incremental-backup
+  namespace: backup-system
+  labels:
+    app: incremental-backup
+    backup-strategy: incremental
+    environment: production
+  annotations:
+    description: "Incremental backup with change-based data capture"
+    version: "1.0.0"
+
+spec:
+  # Incremental Backup Strategy
+  strategy:
+    type: block-level  # Options: block-level, file-level, byte-level
+    changeDetection: timestamp  # Options: timestamp, checksum, journal
+    
+    # Base backup configuration
+    baseBackup:
+      schedule: "0 1 * * 0"  # Weekly full backup on Sunday
+      retention: 4  # Keep 4 base backups
+      compression: true
+      verification: true
+      
+    # Incremental backup configuration
+    incrementalBackup:
+      schedule: "0 2 * * 1-6"  # Daily incremental Mon-Sat
+      retention: 7  # Keep 7 days of incrementals
+      chainLength: 7  # Max incremental chain before new base
+      
+  # Source Configuration
+  source:
+    name: application-data
+    type: filesystem
+    paths:
+      - /var/app/data
+      - /var/app/uploads
+      - /var/app/config
+      
+    # Change tracking configuration
+    changeTracking:
+      enabled: true
+      method: journal  # Options: journal, snapshot, timestamp
+      journalPath: /var/backup/journal
+      
+      # File system snapshot support
+      snapshot:
+        enabled: true
+        provider: lvm  # Options: lvm, zfs, btrfs
+        snapshotSize: 10G
+        
+    # Exclusion patterns
+    exclude:
+      patterns:
+        - "*.tmp"
+        - "*.cache"
+        - "*.log"
+        - ".git/*"
+        - "node_modules/*"
+      directories:
+        - /var/app/data/temp
+        - /var/app/data/cache
+
+  # Destination Configuration
+  destination:
+    type: s3
+    bucket: incremental-backups
+    region: us-east-1
+    prefix: "incremental/${SOURCE}/${DATE}/"
+    
+    # Storage optimization
+    storageClass: INTELLIGENT_TIERING
+    lifecycle:
+      - name: transition-to-glacier
+        days: 30
+        storageClass: GLACIER
+      - name: transition-to-deep-archive
+        days: 90
+        storageClass: DEEP_ARCHIVE
+        
+    # Encryption
+    encryption:
+      enabled: true
+      type: SSE-KMS
+      kmsKeyId: arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+
+  # Incremental Backup Options
+  options:
+    # Change detection settings
+    changeDetection:
+      blockSize: 64KB  # Block size for block-level incremental
+      hashAlgorithm: SHA256
+      
+      # Optimization
+      skipUnchangedBlocks: true
+      deduplication: true
+      
+    # Compression settings
+    compression:
+      enabled: true
+      algorithm: zstd  # Fast compression for incremental
+      level: 3
+      
+    # Delta encoding
+    deltaEncoding:
+      enabled: true
+      algorithm: rsync
+      windowSize: 16KB
+      
+    # Bandwidth optimization
+    bandwidth:
+      limit: 50MB/s
+      adaptive: true
+      
+    # Parallel processing
+    parallelism:
+      enabled: true
+      threads: 4
+      filesPerThread: 100
+
+  # Backup Chain Management
+  chainManagement:
+    # Maximum chain length before forcing full backup
+    maxChainLength: 7
+    
+    # Chain consolidation
+    consolidation:
+      enabled: true
+      schedule: "0 3 * * 0"  # Weekly consolidation
+      keepConsolidated: true
+      
+    # Chain verification
+    verification:
+      enabled: true
+      frequency: daily
+      validateChain: true
+      
+    # Orphan cleanup
+    cleanup:
+      enabled: true
+      removeOrphans: true
+      retainDays: 7
+
+  # Metadata Management
+  metadata:
+    # Backup catalog
+    catalog:
+      enabled: true
+      database: postgresql
+      host: backup-catalog.example.com
+      port: 5432
+      database: backup_catalog
+      credentialsSecret: catalog-db-credentials
+      
+    # File index
+    index:
+      enabled: true
+      type: sqlite
+      path: /var/backup/index/incremental.db
+      
+      # Index optimization
+      optimization:
+        enabled: true
+        vacuumSchedule: "0 4 * * 0"
+        rebuildSchedule: "0 5 1 * *"
+        
+    # Change log
+    changeLog:
+      enabled: true
+      path: /var/backup/changelog
+      retention: 90d
+      format: json
+
+  # Performance Optimization
+  performance:
+    # I/O optimization
+    io:
+      readAhead: 4MB
+      writeBuffer: 8MB
+      directIO: false
+      
+    # Memory management
+    memory:
+      bufferSize: 256MB
+      cacheSize: 512MB
+      
+    # CPU optimization
+    cpu:
+      threads: 4
+      affinity: true
+      
+    # Network optimization
+    network:
+      tcpWindowSize: 256KB
+      keepAlive: true
+      compression: true
+
+  # Monitoring and Reporting
+  monitoring:
+    enabled: true
+    
+    metrics:
+      - incremental_backup_size_bytes
+      - incremental_backup_duration_seconds
+      - changed_blocks_count
+      - backup_chain_length
+      - deduplication_ratio
+      
+    alerts:
+      - name: chain-too-long
+        condition: backup_chain_length > 7
+        severity: warning
+        
+      - name: backup-failed
+        condition: backup_status == "failed"
+        severity: critical
+        
+      - name: high-change-rate
+        condition: changed_blocks_ratio > 0.5
+        severity: info
+        
+    reporting:
+      enabled: true
+      schedule: daily
+      recipients:
+        - backup-team@example.com
+      metrics:
+        - backupSize
+        - changeRate
+        - compressionRatio
+        - deduplicationRatio
+
+  # Retention Policy
+  retention:
+    # Incremental backups retention
+    incremental:
+      days: 7
+      
+    # Base backups retention
+    base:
+      weeks: 4
+      months: 12
+      
+    # Policy rules
+    rules:
+      - name: keep-daily-incremental
+        type: incremental
+        duration: 7d
+        
+      - name: keep-weekly-base
+        type: base
+        duration: 4w
+        
+      - name: keep-monthly-base
+        type: base
+        duration: 12m
+        archiveToGlacier: true
+
+  # Recovery Configuration
+  recovery:
+    # Point-in-time recovery
+    pointInTime:
+      enabled: true
+      granularity: 1h
+      
+    # Fast recovery
+    fastRecovery:
+      enabled: true
+      cacheRecentBackups: true
+      cacheDuration: 7d
+      
+    # Recovery testing
+    testing:
+      enabled: true
+      schedule: "0 6 * * 0"  # Weekly recovery test
+      testEnvironment: backup-test
+      validateIntegrity: true
+
+  # Hooks and Scripts
+  hooks:
+    preBackup:
+      - name: snapshot-filesystem
+        script: /scripts/create-snapshot.sh
+        timeout: 300
+        
+      - name: flush-buffers
+        script: /scripts/flush-buffers.sh
+        timeout: 60
+        
+    postBackup:
+      - name: remove-snapshot
+        script: /scripts/remove-snapshot.sh
+        timeout: 300
+        
+      - name: update-catalog
+        script: /scripts/update-catalog.sh
+        timeout: 120
+        
+    onChainComplete:
+      - name: consolidate-chain
+        script: /scripts/consolidate-chain.sh
+        timeout: 1800
+
+  # Advanced Settings
+  advanced:
+    # Deduplication
+    deduplication:
+      enabled: true
+      scope: global  # Options: global, per-backup, per-source
+      blockSize: 64KB
+      hashAlgorithm: SHA256
+      
+    # Synthetic full backup
+    syntheticFull:
+      enabled: true
+      schedule: "0 2 1 * *"  # Monthly
+      consolidateIncrementals: true
+      
+    # Backup validation
+    validation:
+      enabled: true
+      checksumVerification: true
+      restoreTest: false
+      
+    # Disaster recovery
+    disasterRecovery:
+      enabled: true
+      replication:
+        - destination: s3://dr-backups-west/
+          region: us-west-2
+          async: true
+
+---
+# Incremental Backup Best Practices
+#
+# 1. Chain Length Management:
+#    - Keep chains short (7-14 incrementals)
+#    - Regular full backups prevent long chains
+#    - Monitor chain length metrics
+#
+# 2. Change Detection:
+#    - Use block-level for large files
+#    - Use file-level for many small files
+#    - Enable snapshots for consistency
+#
+# 3. Performance:
+#    - Adjust block size based on workload
+#    - Enable deduplication for space savings
+#    - Use compression for network efficiency
+#
+# 4. Recovery:
+#    - Test recovery regularly
+#    - Keep base backups accessible
+#    - Document recovery procedures
+#
+# 5. Monitoring:
+#    - Track change rates
+#    - Monitor chain health
+#    - Alert on anomalies

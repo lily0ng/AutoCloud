@@ -1,0 +1,84 @@
+{
+  "name": "CloudStack Virtual Machine Template",
+  "description": "Template for deploying virtual machines in Apache CloudStack",
+  "version": "1.0",
+  "parameters": {
+    "vmName": {
+      "type": "string",
+      "description": "Name of the virtual machine",
+      "default": "my-vm"
+    },
+    "serviceOffering": {
+      "type": "string",
+      "description": "Service offering ID",
+      "required": true
+    },
+    "templateId": {
+      "type": "string",
+      "description": "Template ID for the VM",
+      "required": true
+    },
+    "zoneId": {
+      "type": "string",
+      "description": "Zone ID where VM will be deployed",
+      "required": true
+    },
+    "networkIds": {
+      "type": "array",
+      "description": "List of network IDs",
+      "default": []
+    },
+    "diskOffering": {
+      "type": "string",
+      "description": "Disk offering ID",
+      "required": false
+    },
+    "size": {
+      "type": "integer",
+      "description": "Root disk size in GB",
+      "default": 20
+    },
+    "keypair": {
+      "type": "string",
+      "description": "SSH keypair name",
+      "required": false
+    },
+    "userdata": {
+      "type": "string",
+      "description": "Base64 encoded userdata script",
+      "required": false
+    }
+  },
+  "resources": {
+    "virtualMachine": {
+      "type": "CloudStack::Compute::VirtualMachine",
+      "properties": {
+        "name": "${vmName}",
+        "displayName": "${vmName}",
+        "serviceOfferingId": "${serviceOffering}",
+        "templateId": "${templateId}",
+        "zoneId": "${zoneId}",
+        "networkIds": "${networkIds}",
+        "diskOfferingId": "${diskOffering}",
+        "rootDiskSize": "${size}",
+        "keypair": "${keypair}",
+        "userData": "${userdata}",
+        "startVm": true
+      }
+    }
+  },
+  "outputs": {
+    "vmId": {
+      "value": "${virtualMachine.id}",
+      "description": "Virtual Machine ID"
+    },
+    "ipAddress": {
+      "value": "${virtualMachine.ipAddress}",
+      "description": "Primary IP address"
+    },
+    "state": {
+      "value": "${virtualMachine.state}",
+      "description": "VM state"
+    }
+  }
+}

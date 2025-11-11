@@ -1,0 +1,155 @@
+# Azure DevOps Pipeline Template
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+variables:
+  - group: production-variables
+  - name: dockerRegistryServiceConnection
+    value: 'docker-registry-connection'
+  - name: imageRepository
+    value: 'myapp'
+  - name: containerRegistry
+    value: 'myregistry.azurecr.io'
+  - name: dockerfilePath
+    value: '$(Build.SourcesDirectory)/Dockerfile'
+  - name: tag
+    value: '$(Build.BuildId)'
+  - name: vmImageName
+    value: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build and Push
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build and push image
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+          latest
+    
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Kubernetes manifests
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/k8s'
+        ArtifactName: 'manifests'
+
+- stage: Test
+  displayName: Run Tests
+  dependsOn: Build
+  jobs:
+  - job: UnitTests
+    displayName: Unit Tests
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+    
+    - script: |
+        npm ci
+        npm run test:unit
+      displayName: 'Run unit tests'
+    
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/test-results.xml'
+    
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+
+  - job: SecurityScan
+    displayName: Security Scan
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: ContainerScan@0
+      displayName: 'Scan container image'
+      inputs:
+        image: '$(containerRegistry)/$(imageRepository):$(tag)'
+        severity: 'HIGH,CRITICAL'
+
+- stage: DeployStaging
+  displayName: Deploy to Staging
+  dependsOn: Test
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+  jobs:
+  - deployment: DeployStaging
+    displayName: Deploy to Staging
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'staging'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: Deploy to Kubernetes
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: 'k8s-staging'
+              namespace: 'staging'
+              manifests: |
+                $(Pipeline.Workspace)/manifests/*.yml
+              containers: |
+                $(containerRegistry)/$(imageRepository):$(tag)
+
+- stage: DeployProduction
+  displayName: Deploy to Production
+  dependsOn: Test
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployProduction
+    displayName: Deploy to Production
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: Deploy to Kubernetes
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: 'k8s-production'
+              namespace: 'production'
+              manifests: |
+                $(Pipeline.Workspace)/manifests/*.yml
+              containers: |
+                $(containerRegistry)/$(imageRepository):$(tag)
+          
+          - task: Kubernetes@1
+            displayName: 'Verify deployment'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'k8s-production'
+              namespace: 'production'
+              command: 'rollout'
+              arguments: 'status deployment/myapp'

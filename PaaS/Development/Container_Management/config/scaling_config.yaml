@@ -1,0 +1,29 @@
+autoscaling:
+  enabled: true
+  metrics:
+    cpu_threshold: 75
+    memory_threshold: 80
+  scaling_policies:
+    min_instances: 1
+    max_instances: 10
+    cooldown_period: 300
+    
+  strategies:
+    horizontal:
+      enabled: true
+      increment: 1
+      decrement: 1
+    vertical:
+      enabled: true
+      increment_resources:
+        cpu: 0.5
+        memory: 512Mi
+
+load_balancing:
+  algorithm: round-robin
+  session_persistence: true
+  health_checks:
+    interval: 30
+    timeout: 5
+    healthy_threshold: 2
+    unhealthy_threshold: 3

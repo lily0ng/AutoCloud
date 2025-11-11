@@ -1,0 +1,111 @@
+stages:
+  - build
+  - test
+  - security
+  - package
+  - deploy
+
+variables:
+  DOCKER_REGISTRY: registry.autocloud.com
+  GO_VERSION: "1.21"
+
+before_script:
+  - export VERSION=$(git describe --tags --always)
+
+build:go:
+  stage: build
+  image: golang:${GO_VERSION}
+  script:
+    - cd services/service-a && go build -o ../../build/service-a
+    - cd ../service-b && go build -o ../../build/service-b
+    - cd ../service-c && go build -o ../../build/service-c
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 hour
+
+build:c:
+  stage: build
+  image: gcc:latest
+  script:
+    - gcc security/encryption/encryption.c -o build/encryption -lcrypto -lssl
+    - gcc security/firewall/firewall.c -o build/firewall
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 hour
+
+test:unit:
+  stage: test
+  image: golang:${GO_VERSION}
+  script:
+    - go test ./... -v -cover -coverprofile=coverage.out
+  coverage: '/coverage: \d+.\d+% of statements/'
+
+test:integration:
+  stage: test
+  image: python:3.11
+  services:
+    - postgres:15
+    - redis:7
+  script:
+    - pip install -r requirements.txt
+    - python3 -m pytest tests/ -v
+
+security:scan:
+  stage: security
+  image: securego/gosec:latest
+  script:
+    - gosec ./...
+  allow_failure: true
+
+security:trivy:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - trivy fs --security-checks vuln .
+
+package:docker:
+  stage: package
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t ${DOCKER_REGISTRY}/service-a:${VERSION} services/service-a
+    - docker build -t ${DOCKER_REGISTRY}/service-b:${VERSION} services/service-b
+    - docker build -t ${DOCKER_REGISTRY}/service-c:${VERSION} services/service-c
+    - docker push ${DOCKER_REGISTRY}/service-a:${VERSION}
+    - docker push ${DOCKER_REGISTRY}/service-b:${VERSION}
+    - docker push ${DOCKER_REGISTRY}/service-c:${VERSION}
+  only:
+    - main
+    - tags
+
+deploy:dev:
+  stage: deploy
+  script:
+    - ./cicd/deploy/deploy.sh dev ${VERSION}
+  environment:
+    name: development
+  only:
+    - main
+
+deploy:staging:
+  stage: deploy
+  script:
+    - ./cicd/deploy/deploy.sh staging ${VERSION}
+  environment:
+    name: staging
+  when: manual
+  only:
+    - main
+
+deploy:production:
+  stage: deploy
+  script:
+    - ./cicd/deploy/deploy.sh prod ${VERSION}
+  environment:
+    name: production
+  when: manual
+  only:
+    - tags

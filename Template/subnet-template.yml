@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Subnet Template'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetCidr:
+    Type: String
+    Default: 10.0.1.0/24
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+  MapPublicIpOnLaunch:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+
+Resources:
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref SubnetCidr
+      AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: !Ref MapPublicIpOnLaunch
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-Subnet'
+
+Outputs:
+  SubnetId:
+    Value: !Ref Subnet
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetId'

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: centos-deployment
+  labels:
+    app: centos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: centos
+  template:
+    metadata:
+      labels:
+        app: centos
+    spec:
+      containers:
+      - name: centos
+        image: centos:8
+        command: ["/bin/sleep", "3650d"]
+        envFrom:
+        - configMapRef:
+            name: centos-config
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: centos-storage
+          mountPath: /data
+      volumes:
+      - name: centos-storage
+        emptyDir: {}

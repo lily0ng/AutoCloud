@@ -1,0 +1,79 @@
+{
+    "Parameters": {
+        "EnvironmentName": "Production"
+    },
+    "IAMRoles": {
+        "EC2ServiceRole": {
+            "Description": "IAM role for EC2 instances",
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }]
+            },
+            "ManagedPolicyArns": [
+                "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+                "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+            ],
+            "Policies": [{
+                "PolicyName": "EC2CustomPolicy",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:GetObject",
+                            "s3:ListBucket"
+                        ],
+                        "Resource": [
+                            "arn:aws:s3:::company-artifacts/*",
+                            "arn:aws:s3:::company-artifacts"
+                        ]
+                    }]
+                }
+            }]
+        },
+        "LambdaServiceRole": {
+            "Description": "IAM role for Lambda functions",
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "lambda.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }]
+            },
+            "ManagedPolicyArns": [
+                "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+            ],
+            "Policies": [{
+                "PolicyName": "LambdaCustomPolicy",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Action": [
+                            "dynamodb:GetItem",
+                            "dynamodb:PutItem",
+                            "dynamodb:UpdateItem",
+                            "dynamodb:DeleteItem"
+                        ],
+                        "Resource": "arn:aws:dynamodb:*:*:table/UserData"
+                    }]
+                }
+            }]
+        }
+    },
+    "Tags": {
+        "Project": "IAMInfra",
+        "Environment": "Production",
+        "Owner": "Security-Team",
+        "CostCenter": "IT-Security"
+    }
+}

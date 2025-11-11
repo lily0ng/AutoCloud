@@ -1,0 +1,145 @@
+version: 2.1
+
+orbs:
+  docker: circleci/docker@2.1.1
+  kubernetes: circleci/kubernetes@1.3
+
+parameters:
+  deploy-environment:
+    type: enum
+    default: "staging"
+    enum: ["staging", "production"]
+
+commands:
+  install_kubectl:
+    description: Install kubectl and configure cluster access
+    steps:
+      - kubernetes/install-kubectl
+      - kubernetes/install-kubeconfig:
+          cluster-name: << pipeline.parameters.deploy-environment >>
+          
+  deploy_service:
+    description: Deploy a microservice to Kubernetes
+    parameters:
+      service-name:
+        type: string
+      namespace:
+        type: string
+      deployment-file:
+        type: string
+    steps:
+      - run:
+          name: Deploy << parameters.service-name >> to << pipeline.parameters.deploy-environment >>
+          command: |
+            kubectl apply -f << parameters.deployment-file >> -n << parameters.namespace >>
+            kubectl rollout status deployment/<< parameters.service-name >> -n << parameters.namespace >>
+
+jobs:
+  build-services:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - setup_remote_docker
+      - docker/build:
+          path: ./auth-service
+          image: auth-service
+          tag: $CIRCLE_SHA1
+      - docker/build:
+          path: ./api-gateway
+          image: api-gateway
+          tag: $CIRCLE_SHA1
+      - docker/build:
+          path: ./user-service
+          image: user-service
+          tag: $CIRCLE_SHA1
+
+  run-integration-tests:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run:
+          name: Run Integration Tests
+          command: |
+            ./scripts/integration-tests.sh
+
+  deploy-auth-service:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - install_kubectl
+      - deploy_service:
+          service-name: auth-service
+          namespace: << pipeline.parameters.deploy-environment >>
+          deployment-file: k8s/auth-service/deployment.yml
+
+  deploy-api-gateway:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - install_kubectl
+      - deploy_service:
+          service-name: api-gateway
+          namespace: << pipeline.parameters.deploy-environment >>
+          deployment-file: k8s/api-gateway/deployment.yml
+
+  deploy-user-service:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - install_kubectl
+      - deploy_service:
+          service-name: user-service
+          namespace: << pipeline.parameters.deploy-environment >>
+          deployment-file: k8s/user-service/deployment.yml
+
+  health-check:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: Check Services Health
+          command: |
+            ./scripts/health-check.sh << pipeline.parameters.deploy-environment >>
+
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - build-services
+      - run-integration-tests:
+          requires:
+            - build-services
+      - deploy-auth-service:
+          requires:
+            - run-integration-tests
+          filters:
+            branches:
+              only: 
+                - develop
+                - main
+      - deploy-api-gateway:
+          requires:
+            - deploy-auth-service
+          filters:
+            branches:
+              only:
+                - develop
+                - main
+      - deploy-user-service:
+          requires:
+            - deploy-api-gateway
+          filters:
+            branches:
+              only:
+                - develop
+                - main
+      - health-check:
+          requires:
+            - deploy-auth-service
+            - deploy-api-gateway
+            - deploy-user-service

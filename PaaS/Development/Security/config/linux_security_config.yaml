@@ -1,0 +1,38 @@
+linux:
+  firewall:
+    enabled: true
+    default_policy:
+      incoming: deny
+      outgoing: allow
+    allowed_services:
+      - ssh
+      - http
+      - https
+    custom_rules:
+      - port: 22
+        source: trusted_ips
+        action: allow
+  ssh:
+    permit_root_login: false
+    password_authentication: false
+    protocol_version: 2
+    max_auth_tries: 3
+    pubkey_authentication: true
+  updates:
+    auto_update: true
+    security_updates_only: true
+  system:
+    password_policy:
+      min_length: 12
+      max_age: 90
+      remember: 5
+    audit:
+      enabled: true
+      log_retention: 90
+    services:
+      disabled:
+        - telnet
+        - rsh
+    file_permissions:
+      check_suid_sgid: true
+      secure_tmp: true

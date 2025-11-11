@@ -1,0 +1,43 @@
+---
+# SSL Certificate Template
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: web-tls-certificate
+  namespace: web-system
+spec:
+  secretName: web-tls-secret
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - example.com
+    - www.example.com
+    - api.example.com
+  privateKey:
+    algorithm: RSA
+    size: 4096
+    rotationPolicy: Always
+  duration: 2160h  # 90 days
+  renewBefore: 720h  # 30 days
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+    - dns01:
+        cloudflare:
+          email: admin@example.com
+          apiTokenSecretRef:
+            name: cloudflare-api-token
+            key: api-token

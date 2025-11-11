@@ -1,0 +1,195 @@
+---
+# Backup Retention Policy Template
+# Comprehensive retention policy configuration
+
+apiVersion: backup.autocloud.io/v1
+kind: RetentionPolicy
+metadata:
+  name: backup-retention-policy
+  namespace: backup-system
+  labels:
+    app: retention-policy
+    policy-type: backup
+    environment: production
+
+spec:
+  # Retention Strategy
+  strategy:
+    type: GFS  # GFS (Grandfather-Father-Son), Tower-of-Hanoi, Simple
+    
+    # GFS Configuration
+    gfs:
+      daily:
+        count: 7
+        retention: 7d
+        
+      weekly:
+        count: 4
+        retention: 4w
+        dayOfWeek: sunday
+        
+      monthly:
+        count: 12
+        retention: 12m
+        dayOfMonth: 1
+        
+      yearly:
+        count: 7
+        retention: 7y
+        monthOfYear: january
+        dayOfMonth: 1
+
+  # Retention Rules
+  rules:
+    - name: short-term-retention
+      type: incremental
+      duration: 7d
+      storageClass: STANDARD
+      
+    - name: medium-term-retention
+      type: full
+      duration: 30d
+      storageClass: STANDARD_IA
+      
+    - name: long-term-retention
+      type: full
+      duration: 365d
+      storageClass: GLACIER
+      
+    - name: archive-retention
+      type: full
+      duration: 2555d  # 7 years
+      storageClass: DEEP_ARCHIVE
+      immutable: true
+
+  # Lifecycle Management
+  lifecycle:
+    transitions:
+      - age: 7d
+        from: STANDARD
+        to: STANDARD_IA
+        
+      - age: 30d
+        from: STANDARD_IA
+        to: GLACIER
+        
+      - age: 90d
+        from: GLACIER
+        to: DEEP_ARCHIVE
+        
+    expiration:
+      - type: incremental
+        age: 7d
+        
+      - type: full
+        age: 2555d  # 7 years
+        
+    cleanup:
+      enabled: true
+      schedule: "0 5 * * *"
+      removeOrphaned: true
+      removeIncomplete: true
+
+  # Compliance Requirements
+  compliance:
+    enabled: true
+    
+    # Regulatory compliance
+    regulations:
+      - name: HIPAA
+        minimumRetention: 6y
+        immutability: required
+        
+      - name: SOX
+        minimumRetention: 7y
+        immutability: required
+        
+      - name: GDPR
+        minimumRetention: 3y
+        rightToErasure: true
+        
+      - name: PCI-DSS
+        minimumRetention: 1y
+        encryption: required
+        
+    # Legal hold
+    legalHold:
+      enabled: true
+      indefiniteRetention: true
+      requiresApproval: true
+
+  # Storage Optimization
+  optimization:
+    # Deduplication
+    deduplication:
+      enabled: true
+      scope: global
+      
+    # Compression
+    compression:
+      enabled: true
+      recompressOld: true
+      recompressAge: 30d
+      
+    # Tiering
+    tiering:
+      enabled: true
+      autoTier: true
+      costOptimized: true
+
+  # Monitoring and Reporting
+  monitoring:
+    enabled: true
+    
+    metrics:
+      - retention_policy_compliance
+      - storage_used_by_tier
+      - backup_age_distribution
+      - cost_by_storage_class
+      
+    alerts:
+      - name: retention-policy-violation
+        severity: critical
+        
+      - name: storage-capacity-warning
+        threshold: 80
+        severity: warning
+        
+      - name: compliance-violation
+        severity: critical
+        
+    reporting:
+      enabled: true
+      schedule: monthly
+      recipients:
+        - compliance@example.com
+        - backup-admin@example.com
+      content:
+        - retentionCompliance
+        - storageUsage
+        - costAnalysis
+        - complianceStatus
+
+  # Exceptions and Overrides
+  exceptions:
+    - name: critical-data-extended
+      selector:
+        labels:
+          criticality: high
+      retention:
+        minimum: 10y
+        
+    - name: temporary-data-short
+      selector:
+        labels:
+          temporary: true
+      retention:
+        maximum: 30d
+
+  # Audit and Compliance
+  audit:
+    enabled: true
+    logAllChanges: true
+    logAllDeletions: true
+    retentionDays: 365
+    immutableLogs: true

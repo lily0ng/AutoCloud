@@ -1,0 +1,52 @@
+{
+  "gcp_monitor": {
+    "project_id": "${GCP_PROJECT_ID}",
+    "metrics_export": {
+      "interval": 300,
+      "destination": {
+        "cloudwatch_region": "us-west-2",
+        "namespace": "GCP/Metrics"
+      },
+      "resources": {
+        "compute_engine": {
+          "metrics": [
+            "compute.googleapis.com/instance/cpu/utilization",
+            "compute.googleapis.com/instance/memory/usage",
+            "compute.googleapis.com/instance/disk/read_bytes_count",
+            "compute.googleapis.com/instance/disk/write_bytes_count"
+          ],
+          "filter": "resource.type = \"gce_instance\"",
+          "dimensions": ["instance_name", "zone"]
+        },
+        "cloud_run": {
+          "metrics": [
+            "run.googleapis.com/request_count",
+            "run.googleapis.com/request_latencies",
+            "run.googleapis.com/container/memory/utilization"
+          ],
+          "filter": "resource.type = \"cloud_run_revision\"",
+          "dimensions": ["service_name", "revision_name"]
+        },
+        "cloud_sql": {
+          "metrics": [
+            "database.googleapis.com/database/cpu/utilization",
+            "database.googleapis.com/database/memory/usage",
+            "database.googleapis.com/database/disk/bytes_used"
+          ],
+          "filter": "resource.type = \"cloudsql_database\"",
+          "dimensions": ["database_id", "region"]
+        }
+      }
+    },
+    "logging": {
+      "log_export": {
+        "sink_name": "cloudwatch-sink",
+        "filter": "severity >= WARNING",
+        "destination": {
+          "cloudwatch_log_group": "/gcp/logs",
+          "retention_days": 30
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,170 @@
+log_sources:
+  - type: syslog
+    host: localhost
+    port: 514
+  - type: snmp
+    community: public
+    version: 2c
+    hosts:
+      - 192.168.1.1
+      - 192.168.1.2
+
+os_sources:
+  - type: windows
+    host: win-server.local
+    interval: 5  # minutes
+    credentials:
+      username: admin
+      password: ${WIN_PASSWORD}
+    logs:
+      - System
+      - Application
+      - Security
+      - PowerShell
+
+  - type: linux
+    host: linux-server.local
+    interval: 5
+    credentials:
+      username: root
+      password: ${LINUX_PASSWORD}
+    logs:
+      - /var/log/syslog
+      - /var/log/auth.log
+      - /var/log/kern.log
+
+  - type: macos
+    host: mac-pro.local
+    interval: 10
+    credentials:
+      username: admin
+      password: ${MAC_PASSWORD}
+
+  - type: freebsd
+    host: freebsd-server.local
+    interval: 5
+    credentials:
+      username: root
+      password: ${BSD_PASSWORD}
+
+  - type: solaris
+    host: solaris-server.local
+    interval: 5
+    credentials:
+      username: root
+      password: ${SOLARIS_PASSWORD}
+
+network_sources:
+  - type: cisco_ios
+    host: core-switch.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${CISCO_PASSWORD}
+      enable_secret: ${CISCO_ENABLE}
+    collection:
+      commands:
+        - show logging
+        - show log
+        - show version
+
+  - type: paloalto
+    host: firewall.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${PALOALTO_PASSWORD}
+    collection:
+      commands:
+        - show log system
+        - show log traffic
+        - show log threat
+
+  - type: fortigate
+    host: fortigate.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${FORTIGATE_PASSWORD}
+    collection:
+      commands:
+        - get log memory
+        - get log disk
+
+  - type: f5
+    host: loadbalancer.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${F5_PASSWORD}
+
+  - type: checkpoint
+    host: checkpoint.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${CHECKPOINT_PASSWORD}
+
+  - type: arista
+    host: arista-switch.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${ARISTA_PASSWORD}
+
+  - type: juniper
+    host: juniper-router.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${JUNIPER_PASSWORD}
+
+  - type: huawei
+    host: huawei-switch.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${HUAWEI_PASSWORD}
+
+  - type: mikrotik
+    host: mikrotik-router.local
+    interval: 5
+    credentials:
+      username: admin
+      password: ${MIKROTIK_PASSWORD}
+
+  - type: vmware_esxi
+    host: esxi-host.local
+    interval: 5
+    credentials:
+      username: root
+      password: ${VMWARE_PASSWORD}
+
+elasticsearch:
+  host: localhost
+  port: 9200
+  index_prefix: logs
+
+s3_backup:
+  bucket_name: logs-backup
+  region: us-east-1
+  retention_days: 90
+
+security:
+  encryption_enabled: true
+  sensitive_data_scan: true
+  security_patterns:
+    - pattern: "password=[^&]+"
+    - pattern: "\b\d{16}\b"
+
+metrics:
+  prometheus_enabled: true
+  collection_interval: 15
+
+api:
+  enabled: true
+  port: 5000
+  endpoints:
+    - /api/logs
+    - /api/metrics
+    - /api/summary

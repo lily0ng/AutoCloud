@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: supabase/postgres:15.1.0.117
+    container_name: supabase-postgres
+    environment:
+      POSTGRES_PASSWORD: your-super-secret-password
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - supabase-net
+    restart: unless-stopped
+
+  kong:
+    image: kong:3.4.2
+    container_name: supabase-kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+    volumes:
+      - ./kong/kong.yml:/var/lib/kong/kong.yml
+    networks:
+      - supabase-net
+    restart: unless-stopped
+
+  auth:
+    image: supabase/gotrue:v2.99.0
+    container_name: supabase-auth
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:8000
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:your-super-secret-password@postgres:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+    depends_on:
+      - postgres
+    networks:
+      - supabase-net
+    restart: unless-stopped
+
+  rest:
+    image: postgrest/postgrest:v11.2.2
+    container_name: supabase-rest
+    environment:
+      PGRST_DB_URI: postgres://postgres:your-super-secret-password@postgres:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+    depends_on:
+      - postgres
+    networks:
+      - supabase-net
+    restart: unless-stopped
+
+  realtime:
+    image: supabase/realtime:v2.25.35
+    container_name: supabase-realtime
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: your-super-secret-password
+      DB_NAME: postgres
+      PORT: 4000
+      JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+    depends_on:
+      - postgres
+    networks:
+      - supabase-net
+    restart: unless-stopped
+
+  storage:
+    image: supabase/storage-api:v0.43.11
+    container_name: supabase-storage
+    environment:
+      ANON_KEY: your-anon-key
+      SERVICE_KEY: your-service-key
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+      DATABASE_URL: postgres://postgres:your-super-secret-password@postgres:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+    volumes:
+      - storage_data:/var/lib/storage
+    depends_on:
+      - postgres
+      - rest
+    networks:
+      - supabase-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  storage_data:
+
+networks:
+  supabase-net:
+    driver: bridge

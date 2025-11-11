@@ -1,0 +1,46 @@
+autoscaling:
+  horizontal:
+    enabled: true
+    metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 80
+      - type: Resource
+        resource:
+          name: memory
+          target:
+            type: Utilization
+            averageUtilization: 85
+    
+    behavior:
+      scaleUp:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Pods
+            value: 4
+            periodSeconds: 60
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Pods
+            value: 2
+            periodSeconds: 60
+
+  vertical:
+    enabled: true
+    updateMode: Auto
+    controlledResources:
+      - cpu
+      - memory
+    resourcePolicy:
+      containerPolicies:
+        - containerName: '*'
+          minAllowed:
+            cpu: 100m
+            memory: 128Mi
+          maxAllowed:
+            cpu: 4
+            memory: 8Gi

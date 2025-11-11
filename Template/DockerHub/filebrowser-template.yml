@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    ports:
+      - "8080:80"
+    volumes:
+      - /path/to/files:/srv
+      - filebrowser_db:/database
+      - filebrowser_config:/config
+    environment:
+      - FB_DATABASE=/database/filebrowser.db
+      - FB_CONFIG=/config/settings.json
+    networks:
+      - filebrowser-net
+    restart: unless-stopped
+
+volumes:
+  filebrowser_db:
+  filebrowser_config:
+
+networks:
+  filebrowser-net:
+    driver: bridge

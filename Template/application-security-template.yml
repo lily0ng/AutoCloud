@@ -1,0 +1,173 @@
+---
+# Application Security Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-security-config
+  namespace: security
+data:
+  security.conf: |
+    # OWASP Security Headers
+    X-Frame-Options: SAMEORIGIN
+    X-Content-Type-Options: nosniff
+    X-XSS-Protection: 1; mode=block
+    Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+    Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'
+    Referrer-Policy: strict-origin-when-cross-origin
+    Permissions-Policy: geolocation=(), microphone=(), camera=()
+    
+  cors.conf: |
+    Access-Control-Allow-Origin: https://example.com
+    Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+    Access-Control-Allow-Headers: Content-Type, Authorization
+    Access-Control-Max-Age: 3600
+---
+apiVersion: policy/v1
+kind: PodSecurityPolicy
+metadata:
+  name: restricted
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: owasp-modsecurity-crs
+  namespace: security
+data:
+  modsecurity.conf: |
+    SecRuleEngine On
+    SecRequestBodyAccess On
+    SecResponseBodyAccess Off
+    SecRequestBodyLimit 13107200
+    SecRequestBodyNoFilesLimit 131072
+    
+    # SQL Injection Protection
+    SecRule ARGS "@detectSQLi" \
+      "id:1000,phase:2,block,log,msg:'SQL Injection Attack'"
+    
+    # XSS Protection
+    SecRule ARGS "@detectXSS" \
+      "id:1001,phase:2,block,log,msg:'XSS Attack'"
+    
+    # Path Traversal Protection
+    SecRule REQUEST_URI "@contains ../" \
+      "id:1002,phase:1,block,log,msg:'Path Traversal Attack'"
+    
+    # Command Injection Protection
+    SecRule ARGS "@rx (?:;|\||`|>|<|&|\$\(|\$\{)" \
+      "id:1003,phase:2,block,log,msg:'Command Injection Attack'"
+    
+    # File Upload Restrictions
+    SecRule FILES_TMPNAMES "@inspectFile /usr/local/bin/check_upload.sh" \
+      "id:1004,phase:2,block,log,msg:'Malicious File Upload'"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-app
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: secure-app
+  template:
+    metadata:
+      labels:
+        app: secure-app
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: app
+        image: myapp:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SECURITY_HEADERS_ENABLED
+          value: "true"
+        - name: CSRF_PROTECTION_ENABLED
+          value: "true"
+        - name: RATE_LIMITING_ENABLED
+          value: "true"
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rate-limiting-config
+  namespace: security
+data:
+  nginx.conf: |
+    limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+    limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+    limit_conn_zone $binary_remote_addr zone=addr:10m;
+    
+    server {
+      location / {
+        limit_req zone=general burst=20 nodelay;
+        limit_conn addr 10;
+      }
+      
+      location /api/ {
+        limit_req zone=api burst=50 nodelay;
+      }
+      
+      location /login {
+        limit_req zone=login burst=5 nodelay;
+      }
+    }

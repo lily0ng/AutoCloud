@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  web:
+    image: nginx:latest
+    deploy:
+      mode: replicated
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "80:80"
+    networks:
+      - frontend
+
+  api:
+    image: node:16-alpine
+    deploy:
+      mode: replicated
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+    networks:
+      - frontend
+      - backend
+
+  visualizer:
+    image: dockersamples/visualizer:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  frontend:
+    driver: overlay
+    attachable: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.1.0/24
+  backend:
+    driver: overlay
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.2.0/24

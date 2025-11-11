@@ -1,0 +1,46 @@
+database:
+  type: postgresql
+  version: "13.4"
+  
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "managed-premium"
+      size: 100Gi
+    
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2"
+      limits:
+        memory: "8Gi"
+        cpu: "4"
+    
+  replication:
+    enabled: true
+    replicas: 2
+    
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention: 7
+    
+  monitoring:
+    enabled: true
+    prometheus:
+      enabled: true
+    
+  security:
+    networkPolicy:
+      enabled: true
+    encryption:
+      enabled: true
+    
+  connectionPool:
+    maxConnections: 100
+    minIdle: 10
+    maxLifetime: 1800
+    
+  maintenance:
+    autoVacuum: true
+    analyze: true

@@ -1,0 +1,97 @@
+---
+# Web Server Logging Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-web-config
+  namespace: logging
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/nginx/access.log
+      fields:
+        log_type: nginx_access
+      json.keys_under_root: true
+      
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/nginx/error.log
+      fields:
+        log_type: nginx_error
+      multiline.pattern: '^\d{4}/\d{2}/\d{2}'
+      multiline.negate: true
+      multiline.match: after
+    
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/apache2/access.log
+      fields:
+        log_type: apache_access
+    
+    processors:
+      - add_host_metadata: ~
+      - add_cloud_metadata: ~
+      - add_docker_metadata: ~
+    
+    output.elasticsearch:
+      hosts: ['elasticsearch:9200']
+      index: "web-logs-%{+yyyy.MM.dd}"
+    
+    output.logstash:
+      hosts: ['logstash:5044']
+    
+    logging.level: info
+    logging.to_files: true
+    logging.files:
+      path: /var/log/filebeat
+      name: filebeat
+      keepfiles: 7
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-web-config
+  namespace: logging
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+    
+    filter {
+      if [log_type] == "nginx_access" {
+        grok {
+          match => { "message" => "%{COMBINEDAPACHELOG}" }
+        }
+        date {
+          match => [ "timestamp", "dd/MMM/yyyy:HH:mm:ss Z" ]
+        }
+        geoip {
+          source => "clientip"
+        }
+      }
+      
+      if [log_type] == "nginx_error" {
+        grok {
+          match => { "message" => "%{NGINX_ERROR}" }
+        }
+      }
+      
+      mutate {
+        remove_field => ["agent", "ecs", "host", "input"]
+      }
+    }
+    
+    output {
+      elasticsearch {
+        hosts => ["elasticsearch:9200"]
+        index => "web-logs-%{+YYYY.MM.dd}"
+      }
+    }

@@ -1,0 +1,98 @@
+version: '3.8'
+
+# SaaS Microservices Architecture Template
+services:
+  # API Gateway
+  api-gateway:
+    image: kong:latest
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres
+      KONG_PG_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    networks:
+      - saas-network
+    depends_on:
+      - postgres
+
+  # User Service
+  user-service:
+    build: ./services/user
+    environment:
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/users
+      - REDIS_URL=redis://redis:6379
+      - TENANT_ISOLATION=enabled
+    networks:
+      - saas-network
+    depends_on:
+      - postgres
+      - redis
+
+  # Subscription Service
+  subscription-service:
+    build: ./services/subscription
+    environment:
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/subscriptions
+      - STRIPE_API_KEY=${STRIPE_KEY}
+    networks:
+      - saas-network
+
+  # Billing Service
+  billing-service:
+    build: ./services/billing
+    environment:
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/billing
+      - PAYMENT_GATEWAY=stripe
+    networks:
+      - saas-network
+
+  # Notification Service
+  notification-service:
+    build: ./services/notification
+    environment:
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SENDGRID_API_KEY=${SENDGRID_KEY}
+    networks:
+      - saas-network
+
+  # Analytics Service
+  analytics-service:
+    build: ./services/analytics
+    environment:
+      - CLICKHOUSE_URL=http://clickhouse:8123
+    networks:
+      - saas-network
+
+  # PostgreSQL
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - saas-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    networks:
+      - saas-network
+
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "15672:15672"
+    networks:
+      - saas-network
+
+volumes:
+  postgres-data:
+
+networks:
+  saas-network:
+    driver: bridge

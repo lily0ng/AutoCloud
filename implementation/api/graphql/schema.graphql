@@ -1,0 +1,93 @@
+type Query {
+  user(id: ID!): User
+  users(limit: Int, offset: Int): [User!]!
+  transaction(id: ID!): Transaction
+  transactions(userId: ID, status: String): [Transaction!]!
+  report(id: ID!): Report
+  healthCheck: HealthStatus!
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): User!
+  updateUser(id: ID!, input: UpdateUserInput!): User!
+  deleteUser(id: ID!): Boolean!
+  
+  createTransaction(input: CreateTransactionInput!): Transaction!
+  updateTransactionStatus(id: ID!, status: String!): Transaction!
+  
+  generateReport(input: ReportInput!): Report!
+}
+
+type Subscription {
+  transactionCreated: Transaction!
+  userUpdated(userId: ID!): User!
+}
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  role: String!
+  createdAt: String!
+  updatedAt: String!
+  transactions: [Transaction!]!
+}
+
+type Transaction {
+  id: ID!
+  userId: ID!
+  type: String!
+  amount: Float!
+  status: String!
+  metadata: JSON
+  createdAt: String!
+  user: User!
+}
+
+type Report {
+  id: ID!
+  type: String!
+  status: String!
+  data: JSON
+  generatedAt: String!
+}
+
+type HealthStatus {
+  status: String!
+  services: ServiceStatus!
+  timestamp: String!
+}
+
+type ServiceStatus {
+  database: String!
+  cache: String!
+  queue: String!
+}
+
+input CreateUserInput {
+  username: String!
+  email: String!
+  password: String!
+  role: String
+}
+
+input UpdateUserInput {
+  username: String
+  email: String
+  role: String
+}
+
+input CreateTransactionInput {
+  userId: ID!
+  type: String!
+  amount: Float!
+  metadata: JSON
+}
+
+input ReportInput {
+  type: String!
+  startDate: String!
+  endDate: String!
+}
+
+scalar JSON

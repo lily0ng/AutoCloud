@@ -1,0 +1,40 @@
+---
+# Magento E-commerce Template
+version: '3.8'
+services:
+  magento:
+    image: bitnami/magento:latest
+    restart: always
+    ports: ["80:8080", "443:8443"]
+    environment:
+      MAGENTO_DATABASE_HOST: mariadb
+      MAGENTO_DATABASE_NAME: magento
+      MAGENTO_DATABASE_USER: magento
+      MAGENTO_DATABASE_PASSWORD: ${DB_PASSWORD:-magentopass}
+      MAGENTO_USERNAME: admin
+      MAGENTO_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      MAGENTO_EMAIL: admin@example.com
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+    volumes: [magento_data:/bitnami/magento]
+    depends_on: [mariadb, elasticsearch]
+  mariadb:
+    image: mariadb:10.6
+    restart: always
+    environment:
+      MARIADB_DATABASE: magento
+      MARIADB_USER: magento
+      MARIADB_PASSWORD: ${DB_PASSWORD:-magentopass}
+      MARIADB_ROOT_PASSWORD: ${ROOT_PASSWORD:-rootpass}
+    volumes: [mariadb_data:/var/lib/mysql]
+  elasticsearch:
+    image: elasticsearch:7.17.0
+    restart: always
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes: [elasticsearch_data:/usr/share/elasticsearch/data]
+volumes:
+  magento_data:
+  mariadb_data:
+  elasticsearch_data:

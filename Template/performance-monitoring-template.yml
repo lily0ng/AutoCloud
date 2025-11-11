@@ -1,0 +1,133 @@
+---
+# Performance Monitoring Template
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+data:
+  datasources.yml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      editable: true
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki:3100
+      editable: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+data:
+  performance-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Application Performance",
+        "panels": [
+          {
+            "title": "Request Rate",
+            "targets": [{"expr": "rate(http_requests_total[5m])"}],
+            "type": "graph"
+          },
+          {
+            "title": "Response Time P95",
+            "targets": [{"expr": "histogram_quantile(0.95, http_request_duration_seconds_bucket)"}],
+            "type": "graph"
+          },
+          {
+            "title": "Error Rate",
+            "targets": [{"expr": "rate(http_requests_total{status=~\"5..\"}[5m])"}],
+            "type": "graph"
+          },
+          {
+            "title": "CPU Usage",
+            "targets": [{"expr": "rate(process_cpu_seconds_total[5m]) * 100"}],
+            "type": "graph"
+          },
+          {
+            "title": "Memory Usage",
+            "targets": [{"expr": "process_resident_memory_bytes"}],
+            "type": "graph"
+          },
+          {
+            "title": "Active Connections",
+            "targets": [{"expr": "sum(active_connections)"}],
+            "type": "stat"
+          }
+        ]
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: grafana-secret
+              key: admin-password
+        - name: GF_INSTALL_PLUGINS
+          value: "grafana-piechart-panel,grafana-clock-panel"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        - name: datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: dashboards
+          mountPath: /etc/grafana/provisioning/dashboards
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-storage
+      - name: datasources
+        configMap:
+          name: grafana-datasources
+      - name: dashboards
+        configMap:
+          name: grafana-dashboards
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  selector:
+    app: grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
+  type: LoadBalancer

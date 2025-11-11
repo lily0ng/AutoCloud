@@ -1,0 +1,47 @@
+backup:
+  global:
+    encryption_enabled: true
+    compression_enabled: true
+    
+  schedules:
+    database:
+      full:
+        frequency: "0 0 * * *"  # Daily at midnight
+        retention_days: 30
+      incremental:
+        frequency: "0 */6 * * *"  # Every 6 hours
+        retention_days: 7
+        
+    filesystem:
+      frequency: "0 2 * * *"  # Daily at 2 AM
+      retention_days: 14
+      
+  storage:
+    primary:
+      type: s3
+      bucket: "paas-backups"
+      region: "us-east-1"
+      
+    secondary:
+      type: azure_blob
+      container: "backup-archive"
+      region: "eastus"
+      
+  disaster_recovery:
+    rpo_hours: 1
+    rto_hours: 4
+    cross_region_replication: true
+    
+  monitoring:
+    success_notification:
+      enabled: true
+      channels: ["email", "slack"]
+      
+    failure_notification:
+      enabled: true
+      channels: ["email", "slack", "pagerduty"]
+      
+  validation:
+    enabled: true
+    frequency: "0 3 * * 0"  # Weekly on Sunday at 3 AM
+    sample_restore_test: true

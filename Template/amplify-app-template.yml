@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Amplify App Template'
+
+Parameters:
+  AppName:
+    Type: String
+    Default: MyAmplifyApp
+  Repository:
+    Type: String
+    Description: GitHub repository URL
+  OAuthToken:
+    Type: String
+    NoEcho: true
+    Description: GitHub personal access token
+
+Resources:
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: !Ref AppName
+      Repository: !Ref Repository
+      OauthToken: !Ref OAuthToken
+      BuildSpec: |
+        version: 1
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - npm install
+            build:
+              commands:
+                - npm run build
+          artifacts:
+            baseDirectory: build
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - node_modules/**/*
+      EnvironmentVariables:
+        - Name: _LIVE_UPDATES
+          Value: '[{"name":"Amplify CLI","pkg":"@aws-amplify/cli","type":"npm","version":"latest"}]'
+
+  AmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      AppId: !GetAtt AmplifyApp.AppId
+      BranchName: main
+      EnableAutoBuild: true
+      EnablePullRequestPreview: true
+
+Outputs:
+  AppId:
+    Value: !GetAtt AmplifyApp.AppId
+  DefaultDomain:
+    Value: !GetAtt AmplifyApp.DefaultDomain
+  AppUrl:
+    Value: !Sub 'https://main.${AmplifyApp.DefaultDomain}'

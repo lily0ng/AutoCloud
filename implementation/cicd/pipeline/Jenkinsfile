@@ -1,0 +1,120 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_REGISTRY = 'registry.autocloud.com'
+        PROJECT_NAME = 'autocloud'
+        KUBECONFIG = credentials('kubeconfig')
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'git describe --tags --always > version.txt'
+            }
+        }
+        
+        stage('Build') {
+            parallel {
+                stage('Build Go Services') {
+                    steps {
+                        sh '''
+                            cd services/service-a && go build -o ../../build/service-a
+                            cd services/service-b && go build -o ../../build/service-b
+                            cd services/service-c && go build -o ../../build/service-c
+                        '''
+                    }
+                }
+                stage('Build C Programs') {
+                    steps {
+                        sh '''
+                            gcc security/encryption/encryption.c -o build/encryption -lcrypto
+                            gcc security/firewall/firewall.c -o build/firewall
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Test') {
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        sh 'go test ./... -v -cover'
+                    }
+                }
+                stage('Integration Tests') {
+                    steps {
+                        sh 'python3 -m pytest tests/ -v'
+                    }
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                sh 'gosec ./...'
+                sh 'trivy fs --security-checks vuln .'
+            }
+        }
+        
+        stage('Build Docker Images') {
+            steps {
+                sh '''
+                    docker build -t ${DOCKER_REGISTRY}/service-a:${BUILD_NUMBER} services/service-a
+                    docker build -t ${DOCKER_REGISTRY}/service-b:${BUILD_NUMBER} services/service-b
+                    docker build -t ${DOCKER_REGISTRY}/service-c:${BUILD_NUMBER} services/service-c
+                '''
+            }
+        }
+        
+        stage('Push Images') {
+            steps {
+                sh '''
+                    docker push ${DOCKER_REGISTRY}/service-a:${BUILD_NUMBER}
+                    docker push ${DOCKER_REGISTRY}/service-b:${BUILD_NUMBER}
+                    docker push ${DOCKER_REGISTRY}/service-c:${BUILD_NUMBER}
+                '''
+            }
+        }
+        
+        stage('Deploy to Dev') {
+            steps {
+                sh './cicd/deploy/deploy.sh dev ${BUILD_NUMBER}'
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            when {
+                branch 'main'
+            }
+            steps {
+                input message: 'Deploy to staging?'
+                sh './cicd/deploy/deploy.sh staging ${BUILD_NUMBER}'
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                tag pattern: "v\\d+\\.\\d+\\.\\d+", comparator: "REGEXP"
+            }
+            steps {
+                input message: 'Deploy to production?'
+                sh './cicd/deploy/deploy.sh prod ${BUILD_NUMBER}'
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

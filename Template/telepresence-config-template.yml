@@ -1,0 +1,8 @@
+version: "2.0"
+intercept:
+  - name: myapp
+    service: myapp
+    port: 8080:8080
+    env:
+      - name: DATABASE_URL
+        value: postgresql://localhost:5432/devdb

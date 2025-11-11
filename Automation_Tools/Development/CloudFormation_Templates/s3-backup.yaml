@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'S3 Backup Solution with Lifecycle Policies'
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name of the S3 bucket (must be globally unique)
+  
+  RetentionDays:
+    Type: Number
+    Description: Number of days to retain backups before moving to Glacier
+    Default: 90
+    MinValue: 1
+    MaxValue: 3650
+
+Resources:
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Ref BucketName
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: MoveToGlacier
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: !Ref RetentionDays
+                StorageClass: GLACIER
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 365
+          - Id: CleanupIncomplete
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+  BackupBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BackupBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: EnforceTLS
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !Sub ${BackupBucket.Arn}/*
+              - !GetAtt BackupBucket.Arn
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+  BackupUser:
+    Type: AWS::IAM::User
+    Properties:
+      Policies:
+        - PolicyName: BackupAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt BackupBucket.Arn
+                  - !Sub ${BackupBucket.Arn}/*
+
+  BackupUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref BackupUser
+
+Outputs:
+  BucketName:
+    Description: Name of the backup bucket
+    Value: !Ref BackupBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-BucketName
+
+  BucketARN:
+    Description: ARN of the backup bucket
+    Value: !GetAtt BackupBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-BucketARN
+
+  BackupUserAccessKey:
+    Description: Access Key ID for backup user
+    Value: !Ref BackupUserAccessKey
+
+  BackupUserSecretKey:
+    Description: Secret Access Key for backup user
+    Value: !GetAtt BackupUserAccessKey.SecretAccessKey

@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - DOCKER_MODS=linuxserver/mods:universal-calibre
+    ports:
+      - "8083:8083"
+    volumes:
+      - calibre_web_config:/config
+      - /path/to/books:/books
+    networks:
+      - calibre-net
+    restart: unless-stopped
+
+volumes:
+  calibre_web_config:
+
+networks:
+  calibre-net:
+    driver: bridge

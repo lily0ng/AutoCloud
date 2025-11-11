@@ -1,0 +1,44 @@
+logging:
+  global:
+    level: INFO
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    date_format: '%Y-%m-%d %H:%M:%S'
+    
+  handlers:
+    file:
+      enabled: true
+      path: /var/log/paas
+      max_size_mb: 100
+      backup_count: 10
+      compression: true
+      
+    console:
+      enabled: true
+      color: true
+      
+    syslog:
+      enabled: true
+      facility: local0
+      address: localhost
+      port: 514
+      
+  aggregation:
+    elasticsearch:
+      hosts: ["localhost:9200"]
+      index_prefix: "paas-logs"
+      shards: 5
+      replicas: 1
+      
+    retention:
+      hot_days: 7
+      warm_days: 30
+      cold_days: 90
+      delete_after_days: 365
+      
+  alerts:
+    error_threshold: 100
+    warning_threshold: 1000
+    notification_channels:
+      - email
+      - slack
+      - pagerduty

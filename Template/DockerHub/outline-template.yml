@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: outline-postgres
+    environment:
+      POSTGRES_DB: outline
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: outline123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - outline-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: outline-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - outline-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: outline-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - outline-net
+
+  outline:
+    image: outlinewiki/outline:latest
+    container_name: outline
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://outline:outline123@postgres:5432/outline
+      REDIS_URL: redis://redis:6379
+      URL: http://localhost:3000
+      SECRET_KEY: your-secret-key
+      UTILS_SECRET: your-utils-secret
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_REGION: us-east-1
+      AWS_S3_UPLOAD_BUCKET_URL: http://minio:9000
+      AWS_S3_UPLOAD_BUCKET_NAME: outline
+      AWS_S3_FORCE_PATH_STYLE: "true"
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - outline-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  outline-net:
+    driver: bridge

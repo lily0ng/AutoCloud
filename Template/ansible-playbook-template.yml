@@ -1,0 +1,44 @@
+---
+# Ansible Playbook Template
+- name: Deploy Application
+  hosts: webservers
+  become: yes
+  vars:
+    app_name: myapp
+    app_port: 3000
+    docker_image: "myapp:latest"
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+    
+    - name: Install Docker
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+    
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+    
+    - name: Pull Docker image
+      docker_image:
+        name: "{{ docker_image }}"
+        source: pull
+    
+    - name: Run application container
+      docker_container:
+        name: "{{ app_name }}"
+        image: "{{ docker_image }}"
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ app_port }}:{{ app_port }}"
+        env:
+          NODE_ENV: production

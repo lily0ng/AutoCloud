@@ -1,0 +1,80 @@
+# Main Datadog agent configuration
+api_key: "<YOUR_DATADOG_API_KEY>"
+site: "datadoghq.com"
+hostname: ""  # Leave empty for auto-detection
+
+# Log collection
+logs_enabled: true
+logs_config:
+  processing_rules:
+    - type: mask_sequences
+      name: "mask_credentials"
+      pattern: "(password|secret|key)(['\"]:\s*['\"])\w+"
+      replacement: "\\1\\2*****"
+
+# Metric collection
+collect_ec2_tags: true
+collect_container_size: true
+docker_query_timeout: 5
+
+# Process monitoring
+process_config:
+  enabled: true
+  intervals:
+    process_realtime: 10
+    process: 30
+
+# APM configuration
+apm_config:
+  enabled: true
+  env: production
+  apm_non_local_traffic: false
+
+# System Probe configuration
+system_probe_config:
+  enabled: true
+  enable_tcp_monitoring: true
+  enable_udp_monitoring: true
+
+# Network monitoring
+network_config:
+  enabled: true
+
+# Integrations
+integrations:
+  # System checks
+  disk:
+    init_config:
+    instances:
+      - use_mount: true
+        excluded_filesystems:
+          - tmpfs
+          - devtmpfs
+        excluded_disks:
+          - /dev/sda1
+        excluded_disk_re: /dev/sde.*
+        tag_by_filesystem: true
+        
+  # Process checks
+  process:
+    init_config:
+    instances:
+      - name: ssh
+        search_string: ['ssh', 'sshd']
+        thresholds:
+          critical: [1, 5]
+          
+  # Network checks
+  network:
+    init_config:
+    instances:
+      - collect_connection_state: true
+        excluded_interfaces:
+          - lo
+          - lo0
+
+# Custom checks directory
+additional_checksd: /etc/datadog-agent/checks.d/
+
+# Logging level
+log_level: info

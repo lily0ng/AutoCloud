@@ -1,0 +1,46 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@4.7
+
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/node:16.13
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - run:
+          name: Run tests
+          command: npm test
+      - run:
+          name: Run build
+          command: npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  deploy:
+    docker:
+      - image: cimg/node:16.13
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Deploy to production
+          command: |
+            echo "Add your deployment commands here"
+
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - build-and-test
+      - deploy:
+          requires:
+            - build-and-test
+          filters:
+            branches:
+              only: main

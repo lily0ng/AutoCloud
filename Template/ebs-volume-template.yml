@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon EBS Volume Template'
+
+Parameters:
+  VolumeSize:
+    Type: Number
+    Default: 100
+    Description: Size of the EBS volume in GB
+
+  VolumeType:
+    Type: String
+    Default: gp3
+    AllowedValues:
+      - gp2
+      - gp3
+      - io1
+      - io2
+      - st1
+      - sc1
+
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  Iops:
+    Type: Number
+    Default: 3000
+    Description: IOPS for gp3, io1, or io2 volumes
+
+  Throughput:
+    Type: Number
+    Default: 125
+    Description: Throughput for gp3 volumes in MB/s
+
+  Encrypted:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+Resources:
+  EBSVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      Size: !Ref VolumeSize
+      VolumeType: !Ref VolumeType
+      AvailabilityZone: !Ref AvailabilityZone
+      Encrypted: !Ref Encrypted
+      Iops: !If [IsIopsVolume, !Ref Iops, !Ref AWS::NoValue]
+      Throughput: !If [IsGp3Volume, !Ref Throughput, !Ref AWS::NoValue]
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-Volume'
+
+  VolumeSnapshot:
+    Type: AWS::EC2::Snapshot
+    Properties:
+      VolumeId: !Ref EBSVolume
+      Description: !Sub 'Snapshot of ${AWS::StackName}-Volume'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-Snapshot'
+
+Conditions:
+  IsIopsVolume: !Or
+    - !Equals [!Ref VolumeType, io1]
+    - !Equals [!Ref VolumeType, io2]
+    - !Equals [!Ref VolumeType, gp3]
+  IsGp3Volume: !Equals [!Ref VolumeType, gp3]
+
+Outputs:
+  VolumeId:
+    Value: !Ref EBSVolume
+  SnapshotId:
+    Value: !Ref VolumeSnapshot

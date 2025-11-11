@@ -1,0 +1,76 @@
+---
+# Google Cloud Platform Storage Configuration
+
+persistent_disks:
+  boot_disk:
+    type: "pd-ssd"
+    size_gb: 100
+    image: "debian-cloud/debian-11"
+    encryption:
+      kms_key: "projects/project-id/locations/global/keyRings/ring-name/cryptoKeys/key-name"
+    
+  data_disk:
+    type: "pd-balanced"
+    size_gb: 500
+    multi_attach: true
+    encryption:
+      kms_key: "projects/project-id/locations/global/keyRings/ring-name/cryptoKeys/key-name"
+
+cloud_storage:
+  buckets:
+    main_storage:
+      storage_class: "STANDARD"
+      location: "US-CENTRAL1"
+      versioning: enabled
+      lifecycle_rules:
+        - action: "SetStorageClass"
+          storage_class: "NEARLINE"
+          condition:
+            age_days: 30
+        - action: "SetStorageClass"
+          storage_class: "COLDLINE"
+          condition:
+            age_days: 90
+      retention_policy:
+        retention_period: 30
+      
+    archive:
+      storage_class: "ARCHIVE"
+      location: "US"
+      object_lifecycle:
+        - action: "Delete"
+          condition:
+            age_days: 365
+
+filestore:
+  instance:
+    tier: "BASIC_HDD"
+    file_shares:
+      capacity_gb: 1024
+      name: "share1"
+      nfs_export_options:
+        ip_ranges: ["10.0.0.0/24"]
+        access_mode: "READ_WRITE"
+        squash_mode: "NO_ROOT_SQUASH"
+
+cloud_sql:
+  storage:
+    type: "SSD"
+    size_gb: 100
+    auto_resize: true
+    backup:
+      enabled: true
+      start_time: "03:00"
+      retention_days: 7
+    point_in_time_recovery: true
+
+snapshot_schedule:
+  schedule:
+    - frequency: "daily"
+      retention_days: 7
+    - frequency: "weekly"
+      retention_days: 30
+  snapshot_properties:
+    labels:
+      environment: "production"
+    storage_locations: ["us-central1"]

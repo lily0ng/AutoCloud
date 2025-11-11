@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: seafile-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_LOG_CONSOLE: "true"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - seafile-net
+
+  memcached:
+    image: memcached:1.6-alpine
+    container_name: seafile-memcached
+    entrypoint: memcached -m 256
+    networks:
+      - seafile-net
+
+  seafile:
+    image: seafileltd/seafile-mc:latest
+    container_name: seafile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - seafile_data:/shared
+    environment:
+      - DB_HOST=mariadb
+      - DB_ROOT_PASSWD=rootpassword
+      - TIME_ZONE=UTC
+      - SEAFILE_ADMIN_EMAIL=admin@example.com
+      - SEAFILE_ADMIN_PASSWORD=admin123
+      - SEAFILE_SERVER_LETSENCRYPT=false
+      - SEAFILE_SERVER_HOSTNAME=seafile.example.com
+    depends_on:
+      - mariadb
+      - memcached
+    networks:
+      - seafile-net
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+  seafile_data:
+
+networks:
+  seafile-net:
+    driver: bridge

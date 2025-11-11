@@ -1,0 +1,78 @@
+---
+# AWS Storage Configuration
+
+ebs_volumes:
+  root_volume:
+    volume_type: "gp3"
+    size: 100
+    iops: 3000
+    throughput: 125
+    encrypted: true
+    kms_key_id: "alias/aws/ebs"
+    delete_on_termination: true
+    tags:
+      Environment: "production"
+      
+  data_volume:
+    volume_type: "io2"
+    size: 500
+    iops: 5000
+    encrypted: true
+    multi_attach_enabled: true
+    tags:
+      Type: "data"
+
+ebs_optimized: true
+
+efs_configuration:
+  performance_mode: "generalPurpose"
+  throughput_mode: "bursting"
+  encrypted: true
+  lifecycle_policies:
+    - TransitionToIA: "AFTER_30_DAYS"
+    - TransitionToPrimaryStorageClass: "AFTER_1_ACCESS"
+  backup_policy:
+    status: "ENABLED"
+    schedule: "daily"
+    retention_period: 30
+
+s3_buckets:
+  data_lake:
+    versioning: enabled
+    encryption:
+      type: "SSE-KMS"
+      kms_master_key_id: "alias/s3-key"
+    lifecycle_rules:
+      - transition_to_ia: 30
+      - transition_to_glacier: 90
+    replication:
+      enabled: true
+      destination_bucket: "backup-region-bucket"
+    
+  backup:
+    versioning: enabled
+    encryption:
+      type: "SSE-S3"
+    lifecycle_rules:
+      - transition_to_glacier: 7
+      - expire_after: 365
+
+backup_vault:
+  name: "production-backup"
+  encryption:
+    type: "KMS"
+    kms_key_arn: "arn:aws:kms:region:account:key/backup-key"
+  backup_plans:
+    daily:
+      schedule: "cron(0 5 ? * * *)"
+      retention_period: 30
+    weekly:
+      schedule: "cron(0 5 ? * 1 *)"
+      retention_period: 90
+
+storage_gateway:
+  type: "FILE_GATEWAY"
+  settings:
+    cache_size: 150
+    sync_schedule: "0 0 * * ? *"
+    refresh_cache: true

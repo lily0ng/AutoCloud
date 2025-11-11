@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: paperless-postgres
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: paperless123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - paperless-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - paperless-net
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless
+    ports:
+      - "8000:8000"
+    environment:
+      PAPERLESS_REDIS: redis://redis:6379
+      PAPERLESS_DBHOST: postgres
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: paperless123
+      PAPERLESS_SECRET_KEY: your-secret-key
+      PAPERLESS_TIME_ZONE: UTC
+      PAPERLESS_OCR_LANGUAGE: eng
+    volumes:
+      - paperless_data:/usr/src/paperless/data
+      - paperless_media:/usr/src/paperless/media
+      - paperless_export:/usr/src/paperless/export
+      - paperless_consume:/usr/src/paperless/consume
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - paperless-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  paperless_data:
+  paperless_media:
+  paperless_export:
+  paperless_consume:
+
+networks:
+  paperless-net:
+    driver: bridge

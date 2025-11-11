@@ -1,0 +1,25 @@
+aws:
+  regions:
+    - us-east-1
+    - us-west-2
+  instance_types:
+    - t2.micro
+    - t2.small
+    - t2.medium
+  os_configurations:
+    ubuntu2004:
+      ami_id: ami-0261755bbcb8c4a84
+      username: ubuntu
+      docker_version: "20.10"
+    amazonlinux2:
+      ami_id: ami-0cff7528ff583bf9a
+      username: ec2-user
+      docker_version: "20.10"
+    centos7:
+      ami_id: ami-0686851c4e7b1a8e1
+      username: centos
+      docker_version: "20.10"
+    debian11:
+      ami_id: ami-0fec2c2e2017f4e7b
+      username: admin
+      docker_version: "20.10"

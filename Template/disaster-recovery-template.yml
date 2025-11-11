@@ -1,0 +1,34 @@
+---
+# Disaster Recovery Template
+apiVersion: dr.autocloud.io/v1
+kind: DisasterRecovery
+metadata:
+  name: disaster-recovery-plan
+  namespace: dr-system
+spec:
+  objectives:
+    rpo: 1h  # Recovery Point Objective
+    rto: 4h  # Recovery Time Objective
+  primarySite:
+    region: us-east-1
+    datacenter: DC1
+  drSite:
+    region: us-west-2
+    datacenter: DC2
+  replication:
+    type: async
+    interval: 15m
+    encryption: true
+  failover:
+    automatic: false
+    testSchedule: "0 2 1 */3 *"  # Quarterly
+    runbooks:
+      - /docs/dr/failover-procedure.md
+      - /docs/dr/failback-procedure.md
+  monitoring:
+    enabled: true
+    healthChecks:
+      - name: replication-lag
+        threshold: 3600
+      - name: dr-site-readiness
+        interval: 300

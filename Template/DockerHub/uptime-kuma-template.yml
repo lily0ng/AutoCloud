@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime_kuma_data:/app/data
+    networks:
+      - uptime-kuma-net
+    restart: unless-stopped
+
+volumes:
+  uptime_kuma_data:
+    driver: local
+
+networks:
+  uptime-kuma-net:
+    driver: bridge

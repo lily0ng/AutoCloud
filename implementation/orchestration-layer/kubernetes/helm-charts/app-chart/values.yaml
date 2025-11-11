@@ -1,0 +1,59 @@
+replicaCount: 3
+
+image:
+  repository: autocloud/app
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: app.autocloud.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: autocloud-tls
+      hosts:
+        - app.autocloud.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+postgresql:
+  enabled: true
+  auth:
+    username: appuser
+    password: changeme
+    database: appdb
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: changeme
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true

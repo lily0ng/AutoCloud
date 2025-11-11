@@ -1,0 +1,8 @@
+# Elasticsearch Configuration Template
+cluster.name: my-cluster
+node.name: node-1
+network.host: 0.0.0.0
+discovery.seed_hosts: ["es-node-1", "es-node-2", "es-node-3"]
+cluster.initial_master_nodes: ["node-1", "node-2", "node-3"]
+xpack.security.enabled: true
+xpack.security.transport.ssl.enabled: true

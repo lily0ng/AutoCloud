@@ -1,0 +1,50 @@
+---
+- name: AWS EC2 Instance Management
+  hosts: localhost
+  gather_facts: false
+  vars:
+    aws_region: us-east-1
+    instance_type: t2.micro
+    ami_id: ami-0c55b159cbfafe1f0
+    vpc_id: vpc-xxxxxxxx
+    subnet_id: subnet-xxxxxxxx
+    security_group: sg-xxxxxxxx
+    instance_name: web-server
+    
+  tasks:
+    - name: Create EC2 instance
+      amazon.aws.ec2_instance:
+        name: "{{ instance_name }}"
+        instance_type: "{{ instance_type }}"
+        image_id: "{{ ami_id }}"
+        wait: yes
+        region: "{{ aws_region }}"
+        vpc_subnet_id: "{{ subnet_id }}"
+        security_group: "{{ security_group }}"
+        tags:
+          Environment: Production
+          Project: WebApp
+      register: ec2
+
+    - name: Add new instance to host group
+      add_host:
+        hostname: "{{ ec2.instances[0].public_ip }}"
+        groupname: launched_instances
+
+    - name: Wait for SSH to come up
+      wait_for:
+        host: "{{ ec2.instances[0].public_ip }}"
+        port: 22
+        delay: 60
+        timeout: 320
+        state: started
+
+    - name: Create EBS volume
+      amazon.aws.ec2_vol:
+        volume_size: 10
+        region: "{{ aws_region }}"
+        zone: "{{ ec2.instances[0].placement.availability_zone }}"
+        volume_type: gp2
+        instance: "{{ ec2.instances[0].instance_id }}"
+        delete_on_termination: yes
+      register: ebs_vol

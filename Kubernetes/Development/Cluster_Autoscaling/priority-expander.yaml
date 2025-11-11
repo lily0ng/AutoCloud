@@ -1,0 +1,37 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+value: 1000000
+globalDefault: false
+description: "This priority class should be used for high priority pods only."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: medium-priority
+value: 100000
+globalDefault: false
+description: "This priority class should be used for medium priority pods."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: low-priority
+value: 10000
+globalDefault: true
+description: "This priority class should be used for low priority pods."
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: priority-expander-config
+  namespace: kube-system
+data:
+  priorities: |
+    10:
+      - .*-high-priority-.*
+    50:
+      - .*-medium-priority-.*
+    100:
+      - .*-low-priority-.*

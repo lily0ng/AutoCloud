@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  redis-master:
+    image: redis:7-alpine
+    container_name: redis-master
+    command: redis-server --requirepass changeme --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-master-data:/data
+    networks:
+      - cache-network
+
+  redis-slave-1:
+    image: redis:7-alpine
+    container_name: redis-slave-1
+    command: redis-server --slaveof redis-master 6379 --masterauth changeme --requirepass changeme
+    depends_on:
+      - redis-master
+    networks:
+      - cache-network
+
+  redis-slave-2:
+    image: redis:7-alpine
+    container_name: redis-slave-2
+    command: redis-server --slaveof redis-master 6379 --masterauth changeme --requirepass changeme
+    depends_on:
+      - redis-master
+    networks:
+      - cache-network
+
+  redis-sentinel-1:
+    image: redis:7-alpine
+    container_name: redis-sentinel-1
+    command: redis-sentinel /etc/redis/sentinel.conf
+    volumes:
+      - ./redis-sentinel.conf:/etc/redis/sentinel.conf
+    depends_on:
+      - redis-master
+    networks:
+      - cache-network
+
+  memcached:
+    image: memcached:alpine
+    container_name: memcached
+    command: memcached -m 256
+    ports:
+      - "11211:11211"
+    networks:
+      - cache-network
+
+networks:
+  cache-network:
+    driver: bridge
+
+volumes:
+  redis-master-data:

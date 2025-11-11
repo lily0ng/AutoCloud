@@ -1,0 +1,19 @@
+2024-12-31 02:18:10,231 - INFO - Configuration loaded successfully
+2024-12-31 02:18:10,239 - INFO - Prometheus metrics server started on port 8000
+2024-12-31 02:18:10,239 - INFO - Starting system monitoring...
+2024-12-31 02:19:11,259 - ERROR - Error collecting disk metrics: No label names were set when constructing gauge:system_disk_usage
+2024-12-31 02:19:11,260 - INFO - Metrics collected: {'timestamp': '2024-12-31 02:19:10', 'cpu': 22.4, 'memory': 36.2, 'disk': None}
+2024-12-31 02:20:12,273 - ERROR - Error collecting disk metrics: No label names were set when constructing gauge:system_disk_usage
+2024-12-31 02:20:12,273 - INFO - Metrics collected: {'timestamp': '2024-12-31 02:20:11', 'cpu': 15.3, 'memory': 35.5, 'disk': None}
+2024-12-31 02:21:13,289 - ERROR - Error collecting disk metrics: No label names were set when constructing gauge:system_disk_usage
+2024-12-31 02:21:13,289 - INFO - Metrics collected: {'timestamp': '2024-12-31 02:21:12', 'cpu': 33.6, 'memory': 36.7, 'disk': None}
+2024-12-31 02:22:14,306 - ERROR - Error collecting disk metrics: No label names were set when constructing gauge:system_disk_usage
+2024-12-31 02:22:14,306 - INFO - Metrics collected: {'timestamp': '2024-12-31 02:22:13', 'cpu': 35.5, 'memory': 36.1, 'disk': None}
+2024-12-31 02:23:15,320 - ERROR - Error collecting disk metrics: No label names were set when constructing gauge:system_disk_usage
+2024-12-31 02:23:15,320 - INFO - Metrics collected: {'timestamp': '2024-12-31 02:23:14', 'cpu': 42.1, 'memory': 36.6, 'disk': None}
+2024-12-31 02:24:16,343 - ERROR - Error collecting disk metrics: No label names were set when constructing gauge:system_disk_usage
+2024-12-31 02:24:16,343 - INFO - Metrics collected: {'timestamp': '2024-12-31 02:24:15', 'cpu': 18.4, 'memory': 36.5, 'disk': None}
+2024-12-31 02:25:17,361 - ERROR - Error collecting disk metrics: No label names were set when constructing gauge:system_disk_usage
+2024-12-31 02:25:17,362 - INFO - Metrics collected: {'timestamp': '2024-12-31 02:25:16', 'cpu': 19.5, 'memory': 37.2, 'disk': None}
+2024-12-31 02:26:18,382 - ERROR - Error collecting disk metrics: No label names were set when constructing gauge:system_disk_usage
+2024-12-31 02:26:18,383 - INFO - Metrics collected: {'timestamp': '2024-12-31 02:26:17', 'cpu': 50.9, 'memory': 37.7, 'disk': None}

@@ -1,0 +1,184 @@
+version: '3.8'
+
+services:
+  # Application Services
+  service-a:
+    build:
+      context: ../
+      dockerfile: docker/services/service-a/Dockerfile
+    container_name: autocloud-service-a
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  service-b:
+    build:
+      context: ../
+      dockerfile: docker/services/service-b/Dockerfile
+    container_name: autocloud-service-b
+    ports:
+      - "8081:8081"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  service-c:
+    build:
+      context: ../
+      dockerfile: docker/services/service-c/Dockerfile
+    container_name: autocloud-service-c
+    ports:
+      - "8082:8082"
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  # Web Application
+  web-app:
+    build:
+      context: ../
+      dockerfile: docker/services/web-app/Dockerfile
+    container_name: autocloud-web-app
+    ports:
+      - "5000:5000"
+    depends_on:
+      - service-a
+      - service-b
+      - service-c
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  # Nginx Load Balancer
+  nginx:
+    build:
+      context: ../
+      dockerfile: docker/nginx/Dockerfile
+    container_name: autocloud-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - service-a
+      - service-b
+      - service-c
+      - web-app
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    build:
+      context: ../
+      dockerfile: docker/postgres/Dockerfile
+    container_name: autocloud-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_DB=appdb
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    build:
+      context: ../
+      dockerfile: docker/redis/Dockerfile
+    container_name: autocloud-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  # Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: autocloud-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  kafka:
+    build:
+      context: ../
+      dockerfile: docker/kafka/Dockerfile
+    container_name: autocloud-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  # Monitoring
+  prometheus:
+    build:
+      context: ../
+      dockerfile: docker/prometheus/Dockerfile
+    container_name: autocloud-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+  grafana:
+    build:
+      context: ../
+      dockerfile: docker/grafana/Dockerfile
+    container_name: autocloud-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - autocloud-network
+    restart: unless-stopped
+
+networks:
+  autocloud-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

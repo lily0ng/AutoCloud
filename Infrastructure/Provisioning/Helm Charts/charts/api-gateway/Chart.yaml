@@ -1,0 +1,9 @@
+apiVersion: v2
+name: api-gateway
+description: API Gateway Service for managing incoming traffic
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Cloud Team
+    email: cloud@example.com

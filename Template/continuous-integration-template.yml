@@ -1,0 +1,76 @@
+---
+# Continuous Integration Template
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: continuous-integration
+  namespace: cicd
+spec:
+  params:
+    - name: git-url
+      type: string
+    - name: git-revision
+      type: string
+      default: main
+    - name: image-registry
+      type: string
+  
+  workspaces:
+    - name: source-code
+    - name: docker-credentials
+  
+  tasks:
+    - name: clone-repository
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: source-code
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+    
+    - name: code-quality
+      runAfter: [clone-repository]
+      taskRef:
+        name: sonarqube-scanner
+      workspaces:
+        - name: source
+          workspace: source-code
+      params:
+        - name: sonar-host-url
+          value: https://sonarqube.example.com
+    
+    - name: security-scan
+      runAfter: [clone-repository]
+      taskRef:
+        name: trivy-scan
+      workspaces:
+        - name: source
+          workspace: source-code
+    
+    - name: unit-tests
+      runAfter: [code-quality]
+      taskRef:
+        name: run-tests
+      workspaces:
+        - name: source
+          workspace: source-code
+      params:
+        - name: test-command
+          value: npm run test:unit
+    
+    - name: build-artifact
+      runAfter: [unit-tests, security-scan]
+      taskRef:
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: source-code
+        - name: dockerconfig
+          workspace: docker-credentials
+      params:
+        - name: IMAGE
+          value: $(params.image-registry)/app:$(params.git-revision)

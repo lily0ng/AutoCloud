@@ -1,0 +1,118 @@
+# GitLab CI Pipeline Template
+# Production-ready CI/CD configuration
+
+variables:
+  DOCKER_REGISTRY: registry.example.com
+  APP_NAME: myapp
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+stages:
+  - build
+  - test
+  - security
+  - deploy
+  - verify
+
+.docker_login: &docker_login
+  - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $DOCKER_REGISTRY
+
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - *docker_login
+  script:
+    - docker build -t $DOCKER_REGISTRY/$APP_NAME:$CI_COMMIT_SHORT_SHA .
+    - docker tag $DOCKER_REGISTRY/$APP_NAME:$CI_COMMIT_SHORT_SHA $DOCKER_REGISTRY/$APP_NAME:latest
+    - docker push $DOCKER_REGISTRY/$APP_NAME:$CI_COMMIT_SHORT_SHA
+    - docker push $DOCKER_REGISTRY/$APP_NAME:latest
+  only:
+    - main
+    - develop
+    - merge_requests
+
+unit-test:
+  stage: test
+  image: node:18
+  script:
+    - npm ci
+    - npm run test:unit
+  coverage: '/Coverage: \d+\.\d+/'
+  artifacts:
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+
+integration-test:
+  stage: test
+  image: node:18
+  services:
+    - postgres:14
+    - redis:7
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: test_user
+    POSTGRES_PASSWORD: test_pass
+  script:
+    - npm ci
+    - npm run test:integration
+  only:
+    - main
+    - develop
+
+security-scan:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --severity HIGH,CRITICAL $DOCKER_REGISTRY/$APP_NAME:$CI_COMMIT_SHORT_SHA
+  allow_failure: true
+
+sast:
+  stage: security
+  image: returntocorp/semgrep
+  script:
+    - semgrep --config=auto --json --output=sast-report.json
+  artifacts:
+    reports:
+      sast: sast-report.json
+
+deploy-staging:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config use-context staging
+    - kubectl set image deployment/$APP_NAME $APP_NAME=$DOCKER_REGISTRY/$APP_NAME:$CI_COMMIT_SHORT_SHA -n staging
+    - kubectl rollout status deployment/$APP_NAME -n staging --timeout=5m
+  environment:
+    name: staging
+    url: https://staging.example.com
+  only:
+    - develop
+
+deploy-production:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config use-context production
+    - kubectl set image deployment/$APP_NAME $APP_NAME=$DOCKER_REGISTRY/$APP_NAME:$CI_COMMIT_SHORT_SHA -n production
+    - kubectl rollout status deployment/$APP_NAME -n production --timeout=5m
+  environment:
+    name: production
+    url: https://example.com
+  when: manual
+  only:
+    - main
+
+smoke-test:
+  stage: verify
+  image: curlimages/curl:latest
+  script:
+    - curl -f https://$CI_ENVIRONMENT_URL/health || exit 1
+  only:
+    - main
+    - develop

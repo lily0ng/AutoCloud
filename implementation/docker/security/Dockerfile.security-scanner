@@ -1,0 +1,9 @@
+# Security Scanner Dockerfile
+FROM aquasec/trivy:latest
+
+WORKDIR /scan
+
+COPY docker/security/scan-images.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/scan-images.sh
+
+CMD ["/usr/local/bin/scan-images.sh"]

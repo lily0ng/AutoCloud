@@ -1,0 +1,51 @@
+# Debian-specific Datadog Agent Configuration
+api_key: "<YOUR_DATADOG_API_KEY>"
+site: "datadoghq.com"
+
+# Debian System Monitoring
+logs_enabled: true
+logs_config:
+  processing_rules:
+    - type: mask_sequences
+      name: "mask_credentials"
+      pattern: "(password|secret|key)(['\"]:\s*['\"])\w+"
+      replacement: "\\1\\2*****"
+
+# Debian-specific log collection
+logs:
+  - type: file
+    path: /var/log/syslog
+    service: debian-system
+    source: syslog
+  - type: file
+    path: /var/log/auth.log
+    service: debian-auth
+    source: auth
+  - type: file
+    path: /var/log/apt/history.log
+    service: debian-packages
+    source: apt
+
+# Process monitoring
+process_config:
+  enabled: true
+  intervals:
+    process_realtime: 10
+    process: 30
+
+# Debian-specific checks
+auto_conf_images: true
+container_include:
+  - "image:debian"
+
+# APM for Debian services
+apm_config:
+  enabled: true
+  env: production
+
+# Debian package management monitoring
+integrations:
+  apt:
+    init_config:
+    instances:
+      - 

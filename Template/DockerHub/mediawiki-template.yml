@@ -1,0 +1,30 @@
+---
+# MediaWiki Knowledge Base Template
+version: '3.8'
+services:
+  mediawiki:
+    image: mediawiki:latest
+    restart: always
+    ports: ["80:80"]
+    environment:
+      MEDIAWIKI_DB_HOST: mysql
+      MEDIAWIKI_DB_NAME: mediawiki
+      MEDIAWIKI_DB_USER: mediawiki
+      MEDIAWIKI_DB_PASSWORD: ${DB_PASSWORD:-wikipass}
+      MEDIAWIKI_SITE_NAME: MyWiki
+      MEDIAWIKI_SITE_LANG: en
+    volumes: [mediawiki_images:/var/www/html/images, mediawiki_data:/var/www/data]
+    depends_on: [mysql]
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: mediawiki
+      MYSQL_USER: mediawiki
+      MYSQL_PASSWORD: ${DB_PASSWORD:-wikipass}
+      MYSQL_ROOT_PASSWORD: ${ROOT_PASSWORD:-rootpass}
+    volumes: [mysql_data:/var/lib/mysql]
+volumes:
+  mediawiki_images:
+  mediawiki_data:
+  mysql_data:

@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS IAM Policy Template'
+
+Parameters:
+  PolicyName:
+    Type: String
+    Default: MyIAMPolicy
+
+Resources:
+  IAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Ref PolicyName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource: '*'
+
+Outputs:
+  PolicyArn:
+    Value: !Ref IAMPolicy

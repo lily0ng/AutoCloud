@@ -1,0 +1,52 @@
+---
+# Debian Storage Configuration
+include: base_storage_config.yaml
+
+storage_config:
+  package_dependencies:
+    - lvm2
+    - xfsprogs
+    - btrfs-progs
+    - cryptsetup
+    - thin-provisioning-tools
+    
+  filesystem_defaults:
+    type: "ext4"
+    journal_options:
+      - "data=ordered"
+      - "commit=60"
+      
+  advanced_features:
+    snapshots:
+      enabled: true
+      type: "lvm"
+      reserve_space: "10%"
+    quota:
+      enabled: true
+      type: "project"
+    compression:
+      enabled: true
+      algorithm: "zstd"
+      
+  maintenance:
+    auto_fsck: true
+    fsck_schedule: "weekly"
+    journal_check: true
+    smart_monitoring: true
+    
+  backup:
+    method: "lvm-snapshot"
+    retention:
+      daily: 7
+      weekly: 4
+    automation:
+      enabled: true
+      schedule: "daily"
+      
+  security:
+    disk_encryption: true
+    encryption_type: "luks2"
+    mount_options:
+      - "noexec"
+      - "nosuid"
+      - "nodev"

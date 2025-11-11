@@ -1,0 +1,30 @@
+---
+# Windows VM Resource Allocation Configuration
+windows_vm_profiles:
+  small:
+    cpu: 2
+    memory: 8192  # MB
+    storage: 80   # GB
+    network:
+      bandwidth: 1000  # Mbps
+      interfaces: 1
+  medium:
+    cpu: 4
+    memory: 16384
+    storage: 150
+    network:
+      bandwidth: 2000
+      interfaces: 2
+  large:
+    cpu: 8
+    memory: 32768
+    storage: 300
+    network:
+      bandwidth: 5000
+      interfaces: 4
+
+resource_limits:
+  max_cpu_per_vm: 16
+  max_memory_per_vm: 65536  # MB
+  max_storage_per_vm: 1000  # GB
+  max_network_interfaces: 8

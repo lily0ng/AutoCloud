@@ -1,0 +1,63 @@
+---
+# DigitalOcean Storage Configuration
+
+block_storage:
+  volumes:
+    primary:
+      size_gb: 100
+      filesystem_type: "ext4"
+      region: "nyc1"
+      description: "Primary storage volume"
+      tags:
+        - "production"
+        - "database"
+    
+    backup:
+      size_gb: 250
+      filesystem_type: "ext4"
+      region: "nyc1"
+      description: "Backup storage volume"
+      tags:
+        - "backup"
+
+spaces:
+  main_storage:
+    region: "nyc3"
+    acl: "private"
+    versioning: enabled
+    cors_rules:
+      - allowed_origins: ["https://example.com"]
+        allowed_methods: ["GET", "PUT"]
+        max_age_seconds: 3600
+    lifecycle_rules:
+      - type: "Expiration"
+        days: 365
+    
+  cdn_assets:
+    region: "sfo2"
+    acl: "public-read"
+    cdn_enabled: true
+    cors_rules:
+      - allowed_origins: ["*"]
+        allowed_methods: ["GET"]
+        max_age_seconds: 86400
+
+database_storage:
+  type: "premium-ssd"
+  size_gb: 100
+  auto_resize: true
+  backup_window: "02:00-06:00"
+  backup_retention_days: 7
+
+kubernetes_storage:
+  storage_classes:
+    do-block-storage:
+      type: "pd-ssd"
+      reclaim_policy: "Retain"
+      volume_binding_mode: "WaitForFirstConsumer"
+    
+  persistent_volumes:
+    data:
+      size_gb: 100
+      access_modes: ["ReadWriteOnce"]
+      storage_class: "do-block-storage"

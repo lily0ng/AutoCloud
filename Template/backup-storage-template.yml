@@ -1,0 +1,41 @@
+---
+# Backup Storage Template
+apiVersion: storage.autocloud.io/v1
+kind: BackupStorage
+metadata:
+  name: backup-storage
+  namespace: backup-system
+spec:
+  storage:
+    primary:
+      type: s3
+      bucket: primary-backups
+      region: us-east-1
+      storageClass: INTELLIGENT_TIERING
+      capacity: 100TB
+    secondary:
+      type: azure-blob
+      account: backupstorage
+      container: backups
+      region: eastus
+      tier: Cool
+    tertiary:
+      type: tape
+      library: /dev/sg0
+      mediaPool: BACKUP_POOL
+  lifecycle:
+    - age: 30d
+      action: transition
+      storageClass: GLACIER
+    - age: 90d
+      action: transition
+      storageClass: DEEP_ARCHIVE
+  encryption:
+    enabled: true
+    algorithm: AES-256-GCM
+  monitoring:
+    capacity:
+      alertThreshold: 85
+    cost:
+      monthlyBudget: 10000
+      alertThreshold: 90

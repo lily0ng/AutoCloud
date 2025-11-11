@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  dev-tools:
+    build:
+      context: ../
+      dockerfile: docker/development/Dockerfile.dev-tools
+    container_name: dev-tools
+    volumes:
+      - ../../:/workspace
+    networks:
+      - autocloud-network
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+networks:
+  autocloud-network:
+    external: true

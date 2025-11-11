@@ -1,0 +1,96 @@
+---
+- name: Setup Monitoring Stack
+  hosts: monitoring_servers
+  become: yes
+  vars:
+    prometheus_version: 2.37.0
+    grafana_version: 9.0.0
+    node_exporter_version: 1.3.1
+    
+  tasks:
+    - name: Create Prometheus system group
+      group:
+        name: prometheus
+        system: yes
+        state: present
+
+    - name: Create Prometheus system user
+      user:
+        name: prometheus
+        system: yes
+        group: prometheus
+        create_home: no
+        shell: /sbin/nologin
+
+    - name: Download and extract Prometheus
+      unarchive:
+        src: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Copy Prometheus binary
+      copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/prometheus"
+        dest: /usr/local/bin/
+        mode: '0755'
+        remote_src: yes
+
+    - name: Create Prometheus config directory
+      file:
+        path: /etc/prometheus
+        state: directory
+        owner: prometheus
+        group: prometheus
+
+    - name: Configure Prometheus
+      template:
+        src: prometheus.yml.j2
+        dest: /etc/prometheus/prometheus.yml
+        owner: prometheus
+        group: prometheus
+
+    - name: Setup Prometheus service
+      template:
+        src: prometheus.service.j2
+        dest: /etc/systemd/system/prometheus.service
+
+    - name: Install Grafana
+      apt:
+        deb: "https://dl.grafana.com/oss/release/grafana_{{ grafana_version }}_amd64.deb"
+        state: present
+
+    - name: Start and enable Grafana
+      systemd:
+        name: grafana-server
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Install Node Exporter
+      unarchive:
+        src: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Copy Node Exporter binary
+      copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: /usr/local/bin/
+        mode: '0755'
+        remote_src: yes
+
+    - name: Setup Node Exporter service
+      template:
+        src: node_exporter.service.j2
+        dest: /etc/systemd/system/node_exporter.service
+
+    - name: Start monitoring services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      loop:
+        - prometheus
+        - grafana-server
+        - node_exporter

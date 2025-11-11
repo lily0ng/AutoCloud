@@ -1,0 +1,108 @@
+---
+# Application Backup Template
+# Application-aware backup configuration
+
+apiVersion: backup.autocloud.io/v1
+kind: ApplicationBackup
+metadata:
+  name: application-backup
+  namespace: backup-system
+  labels:
+    app: application-backup
+    backup-type: application
+    environment: production
+
+spec:
+  # Application Configuration
+  applications:
+    - name: web-application
+      type: nodejs
+      paths:
+        - /var/app
+        - /var/app/node_modules
+      config:
+        - /etc/app/config.yml
+      data:
+        - /var/app/data
+      preBackup:
+        - npm run pre-backup
+      postBackup:
+        - npm run post-backup
+        
+    - name: java-application
+      type: java
+      paths:
+        - /opt/tomcat
+      config:
+        - /opt/tomcat/conf
+      data:
+        - /opt/tomcat/webapps
+      preBackup:
+        - /opt/tomcat/bin/shutdown.sh
+      postBackup:
+        - /opt/tomcat/bin/startup.sh
+        
+    - name: wordpress
+      type: wordpress
+      paths:
+        - /var/www/html
+      database:
+        engine: mysql
+        name: wordpress
+      uploads:
+        - /var/www/html/wp-content/uploads
+      plugins:
+        - /var/www/html/wp-content/plugins
+      themes:
+        - /var/www/html/wp-content/themes
+
+  # Backup Schedule
+  schedule:
+    cron: "0 3 * * *"
+    timezone: "UTC"
+    maintenanceWindow:
+      start: "02:00"
+      end: "05:00"
+
+  # Destination
+  destination:
+    type: s3
+    bucket: application-backups
+    region: us-east-1
+    prefix: "app-backup/${APP_NAME}/${DATE}/"
+
+  # Backup Options
+  options:
+    applicationConsistent: true
+    quiesceApplication: true
+    compression:
+      enabled: true
+      algorithm: gzip
+    encryption:
+      enabled: true
+    verification:
+      enabled: true
+      restoreTest: true
+
+  # Retention
+  retention:
+    daily: 7
+    weekly: 4
+    monthly: 6
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    healthChecks:
+      - name: application-health
+        endpoint: http://localhost:8080/health
+        interval: 60s
+    metrics:
+      - backup_size_bytes
+      - application_downtime_seconds
+    alerts:
+      - name: backup-failed
+        severity: critical
+      - name: extended-downtime
+        threshold: 300
+        severity: warning

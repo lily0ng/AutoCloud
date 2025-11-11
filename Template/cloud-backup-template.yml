@@ -1,0 +1,132 @@
+---
+# Cloud Backup Template
+# Multi-cloud backup configuration
+
+apiVersion: backup.autocloud.io/v1
+kind: CloudBackup
+metadata:
+  name: cloud-backup
+  namespace: backup-system
+  labels:
+    app: cloud-backup
+    backup-type: cloud
+    environment: production
+
+spec:
+  # Cloud Provider Configuration
+  providers:
+    aws:
+      enabled: true
+      region: us-east-1
+      bucket: cloud-backups-aws
+      storageClass: INTELLIGENT_TIERING
+      encryption:
+        type: SSE-KMS
+        kmsKeyId: arn:aws:kms:us-east-1:123456789012:key/abc
+      credentials:
+        secretName: aws-backup-credentials
+        
+    azure:
+      enabled: true
+      storageAccount: cloudbackupstorage
+      container: backups
+      region: eastus
+      tier: Hot
+      encryption:
+        enabled: true
+      credentials:
+        secretName: azure-backup-credentials
+        
+    gcp:
+      enabled: true
+      bucket: cloud-backups-gcp
+      region: us-central1
+      storageClass: STANDARD
+      encryption:
+        enabled: true
+      credentials:
+        secretName: gcp-backup-credentials
+
+  # Backup Schedule
+  schedule:
+    cron: "0 3 * * *"
+    timezone: "UTC"
+    enabled: true
+
+  # Source Configuration
+  sources:
+    - name: application-data
+      type: filesystem
+      paths:
+        - /var/app/data
+        - /var/app/uploads
+      exclude:
+        - "*.tmp"
+        - "*.log"
+        
+    - name: databases
+      type: database
+      engines:
+        - postgresql
+        - mysql
+        - mongodb
+      credentialsSecret: db-credentials
+
+  # Backup Options
+  options:
+    compression:
+      enabled: true
+      algorithm: gzip
+      level: 6
+      
+    encryption:
+      enabled: true
+      algorithm: AES-256-GCM
+      
+    deduplication:
+      enabled: true
+      blockSize: 64KB
+      
+    multiRegion:
+      enabled: true
+      regions:
+        - us-east-1
+        - us-west-2
+        - eu-west-1
+      replicationType: async
+
+  # Retention Policy
+  retention:
+    daily: 7
+    weekly: 4
+    monthly: 12
+    yearly: 3
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    metrics:
+      - backup_size_bytes
+      - backup_duration_seconds
+      - cloud_storage_cost
+    alerts:
+      - name: backup-failed
+        severity: critical
+      - name: high-cost
+        threshold: 1000
+        severity: warning
+
+  # Cost Optimization
+  costOptimization:
+    enabled: true
+    lifecycle:
+      - age: 30d
+        action: transition
+        storageClass: GLACIER
+      - age: 90d
+        action: transition
+        storageClass: DEEP_ARCHIVE
+    budgetAlert:
+      enabled: true
+      monthlyBudget: 5000
+      alertThreshold: 80

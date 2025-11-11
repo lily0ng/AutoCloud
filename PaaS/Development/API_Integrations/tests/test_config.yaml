@@ -1,0 +1,25 @@
+test_cloudstack:
+  api_key: "test_cloudstack_api_key"
+  secret_key: "test_cloudstack_secret_key"
+  host: "test-cloudstack.example.com"
+  path: "/client/api"
+  secure: true
+
+test_aws:
+  access_key: "test_aws_access_key"
+  secret_key: "test_aws_secret_key"
+  region: "us-east-1"
+  test_instance_id: "i-0123456789abcdef0"
+  test_ami_id: "ami-0123456789abcdef0"
+  test_key_name: "test-key-pair"
+  test_subnet_id: "subnet-0123456789abcdef0"
+
+test_azure:
+  subscription_id: "00000000-0000-0000-0000-000000000000"
+  tenant_id: "11111111-1111-1111-1111-111111111111"
+  client_id: "22222222-2222-2222-2222-222222222222"
+  client_secret: "test_azure_client_secret"
+  test_resource_group: "test-resource-group"
+  test_vm_name: "test-vm"
+  test_location: "eastus"
+  test_vm_size: "Standard_DS1_v2"
