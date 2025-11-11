@@ -77,7 +77,7 @@
   - [MIT License Summary](#mit-license-summary)
 - [📞 Support](#-support)
 - [🛠️ Technologies and Tools](#️-technologies-and-tools)
-- [�‍💻 Project Owner](#-project-owner)
+- [👩‍💻 Project Owner](#-project-owner)
   - [💀 About Me](#-about-me)
   - [🎯 Offensive Arsenal](#-offensive-arsenal)
   - [🛠️ Tech Stack](#️-tech-stack)
@@ -87,7 +87,7 @@
   - [💼 Current Focus](#-current-focus)
 - [🔖 Project Stats](#-project-stats)
   - [📈 Repository Insights](#-repository-insights)
-  - [💜 Built with Passion by 0xff](#-built-with-passion-by-0xff)
+  - [💜 Built with Passion by Lily Yang](#-built-with-passion-by-lily-yang)
 
 </details>
 
@@ -883,7 +883,7 @@ developing custom exploits, and pushing the boundaries of cybersecurity research
 
 <img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif">
 
-### 💜 Built with Passion by 0xff
+### 💜 Built with Passion by Lily Yang
 
 <p>
 <img src="https://img.shields.io/badge/Made%20with-%E2%9D%A4%EF%B8%8F-red?style=for-the-badge" alt="Made with Love">
@@ -891,7 +891,7 @@ developing custom exploits, and pushing the boundaries of cybersecurity research
 <img src="https://img.shields.io/badge/Status-Active-success?style=for-the-badge" alt="Status">
 </p>
 
-**Copyright © 2025 MR Gh0st (0xff). All rights reserved.**
+**Copyright © 2025 Lily Yang. All rights reserved.**
 
 <p>
 <a href="LICENSE">
@@ -899,7 +899,7 @@ developing custom exploits, and pushing the boundaries of cybersecurity research
 </a>
 </p>
 
-**Last Updated:** *January 2025* | [Commit History](https://github.com/0xff/autocloud/commits/main)
+**Last Updated:** *January 2025* | [Commit History]()
 
 <!-- Wave Footer -->
 <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=150&section=footer" width="100%" alt="Footer">
